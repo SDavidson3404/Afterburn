@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://csud42wqpny2d"]
+
+[ext_resource type="Script" uid="uid://bptf2xmr8avlg" path="res://ProceduralGenerator.gd" id="1_71d8t"]
+[ext_resource type="PackedScene" uid="uid://bohcd45ewcaui" path="res://Player/player.tscn" id="1_q4otm"]
+[ext_resource type="PackedScene" uid="uid://bfyf2n3db7drf" path="res://Streets/street_template.tscn" id="3_nxusl"]
+
+[node name="Testing Ground" type="Node3D" unique_id=1583271204]
+script = ExtResource("1_71d8t")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=482228216]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Player" parent="." unique_id=1134854564 instance=ExtResource("1_q4otm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.5, 0)
+
+[node name="StreetTemplate" parent="." unique_id=82585562 instance=ExtResource("3_nxusl")]
+starting_area = true
