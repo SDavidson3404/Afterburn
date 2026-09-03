@@ -1,0 +1,78 @@
+[gd_scene format=3 uid="uid://cous3rj1qs363"]
+
+[ext_resource type="Script" uid="uid://dsscn46nl6yb6" path="res://Streets/street.gd" id="1_c6g42"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_i0fns"]
+size = Vector3(19, 1, 180)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mlvgy"]
+size = Vector3(19, 1, 180)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_c6g42"]
+size = Vector3(19, 15, 1)
+
+[node name="StreetTemplate" type="StaticBody3D" unique_id=82585562]
+script = ExtResource("1_c6g42")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=805161773]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -90)
+shape = SubResource("BoxShape3D_i0fns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1200330379]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -90)
+mesh = SubResource("BoxMesh_mlvgy")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="." unique_id=592957846]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 80.5, 0, -171)
+shape = SubResource("BoxShape3D_i0fns")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1194505867]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 80.5, 0, -171)
+mesh = SubResource("BoxMesh_mlvgy")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=1732015009]
+monitoring = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1252914310]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+shape = SubResource("BoxShape3D_c6g42")
+
+[node name="Links" type="Node3D" parent="." unique_id=368738239]
+
+[node name="EndLink2" type="Node3D" parent="Links" unique_id=346408719]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -180)
+
+[node name="LeftLink" type="Node3D" parent="Links" unique_id=81956118]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -30)
+
+[node name="LeftLink2" type="Node3D" parent="Links" unique_id=1903217883]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -60)
+
+[node name="LeftLink3" type="Node3D" parent="Links" unique_id=536503306]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -90)
+
+[node name="LeftLink4" type="Node3D" parent="Links" unique_id=1349118555]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -120)
+
+[node name="LeftLink5" type="Node3D" parent="Links" unique_id=2081215049]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -150)
+
+[node name="EndLink4" type="Node3D" parent="Links" unique_id=1678099867]
+transform = Transform3D(1.1924881e-08, 0, -1, 0, 1, 0, 1, 0, 1.1924881e-08, 170.59091, 0, -170.68182)
+
+[node name="LeftLink6" type="Node3D" parent="Links" unique_id=1417670949]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.590908, 0, -180.18182)
+
+[node name="LeftLink7" type="Node3D" parent="Links" unique_id=1719108126]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56.590908, 0, -180.18182)
+
+[node name="LeftLink8" type="Node3D" parent="Links" unique_id=2013140131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 86.59091, 0, -180.18182)
+
+[node name="LeftLink9" type="Node3D" parent="Links" unique_id=2123061422]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 116.59091, 0, -180.18182)
+
+[node name="LeftLink10" type="Node3D" parent="Links" unique_id=652534986]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 146.59091, 0, -180.18182)
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]

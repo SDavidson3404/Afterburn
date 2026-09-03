@@ -1,137 +1,154 @@
-extends CharacterBody3D # Inherits all code from the CharacterBody3D Class
-class_name Player # The name of this class
+extends CharacterBody3D
+class_name Player
 
 @onready var camera: Camera3D = $Camera3D # The camera
-@onready var rows: Node3D = $"../Rows" # The node that houses all rows
-const MAX_ROW: int = 4 # The maximum row count
-const ROW_WIDTH: float = 2.0 # The width of each row
+@onready var rows: Node3D = $"../Rows" # The rows parent
+const MIN_ROW: int = 0 # The minimum row
+const MAX_ROW: int = 4 # The maximum row
+const CENTER_ROW: int = 2 # The center row
 const JUMP_VELOCITY: float = 5.0 # The velocity of the jump
-const STRAFE_SPEED: float = 15.0 # The speed of changing between rows
+const STRAFE_SPEED: float = 15.0  # The speed of strafing
 const TURN_SPEED: float = 10.0 # The speed of turning
-var SPEED: float = 15.0 # The speed of the character
-var row: int = 2 # The current row
-var can_turn: bool = false # A bool for if the player can turn
-var facing: String = "Forward"  # The direction the player is facing
-var current_row_loc: Vector3 # The location of the current row
-var current_angle: float = 0.0 # The angle the character currently is at
+const SPEED: float = 15.0 # The speed of movement
+var row: int = CENTER_ROW # The current row
+var facing: String = "Forward"
+var current_row_loc: Vector3= Vector3.ZERO
+var current_angle: float = 0.0
 
-# Runs on ready, sets current row to row 3
-func _ready() -> void: current_row_loc = rows.get_child(2).global_position
+# Runs on startup
+func _ready() -> void:
+	# If there aren't enough rows, push an error
+	if rows.get_child_count() <= MAX_ROW:
+		push_error("Rows must contain at least 5 row nodes.")
+		return
+	# Set current row location
+	current_row_loc = rows.get_child(row).global_position
+	# Set the rotation to the current angle
+	global_rotation.y = current_angle
 
-# Runs on input detected
+# Runs on input
 func _input(event: InputEvent) -> void:
-	# If A is pressed:
-	if event.is_action_pressed("A"):
-		# If row is greater than 0
-		if row > 0:
-			# Lower row by 1
-			row -= 1
-			# Set current row according
-			current_row_loc = rows.get_child(row).global_position
-		# If row IS less than 0
-		else:
-			# Turn left
-			turn_left()
-	# If D is pressed
-	if event.is_action_pressed("D"):
-		# If row is less than the max row
-		if row < MAX_ROW:
-			# Increase row by 1
-			row += 1
-			# Set new row
-			current_row_loc = rows.get_child(row).global_position
-		# If row IS greater than the max row
-		else:
-			# Turn right
-			turn_right()
+	# If A is pressed, move left
+	if event.is_action_pressed("A"): move_left()
+	# Otherwise, if D is pressed, move right
+	elif event.is_action_pressed("D"): move_right()
 
-# Turn left function
-func turn_left():
-	# Match the direction
+# Move left method
+func move_left() -> void:
+	# If row is above the minimum
+	if row > MIN_ROW:
+		# Lower the row
+		row -= 1
+		# Update the target row
+		update_target_row()
+	# Otherwise
+	else:
+		# Turn left
+		turn_left()
+
+# Move right method
+func move_right() -> void:
+	# If row is less than max row
+	if row < MAX_ROW:
+		# Increase row by 1
+		row += 1
+		# Update the target row
+		update_target_row()
+	# Otherwise
+	else:
+		# Turn right
+		turn_right()
+
+# Function to update the target row
+func update_target_row() -> void: current_row_loc = rows.get_child(row).global_position
+
+# Method to turn left
+func turn_left() -> void:
+	# Match the direction the player is facing
 	match facing:
 		"Forward":
-			# Set facing to left
+			# Set turning to left and set the current angle
 			facing = "Left"
-			# Set the angle
-			current_angle = PI/2.0
-		"Back":
-			# Set facing to right
-			facing = "Right"
-			# Set the angle
-			current_angle = -PI/2.0
+			current_angle = PI / 2.0
 		"Left":
-			# Set facing to back
+			# Set facing to Back and set the current angle
 			facing = "Back"
-			# Set the angle
-			current_angle = PI
-		"Right":
-			# Set facing to forward
-			facing = "Forward"
-			# Set the angle
-			current_angle = 0
-	# Set the row to the third row
-	row = 2
-
-# Turn right function
-func turn_right():
-	# Match the facing direction
-	match facing:
-		"Forward":
-			# Set facing to right
-			facing = "Right"
-			# Set the angle
-			current_angle = -PI/2.0
-		"Back":
-			# Set the facing to left
-			facing = "Left"
-			# Set the current angle
-			current_angle = PI/2.0
-		"Left":
-			# Set facing to forward
-			facing = "Forward"
 			# Set current angle
-			current_angle = 0
+			current_angle = PI
+		"Back":
+			# Set facing to right and set the current angle
+			facing = "Right"
+			current_angle = -PI / 2.0
 		"Right":
-			# Set facing to back
+			# Set facing to forward and set the current angle
+			facing = "Forward"
+			current_angle = 0.0
+	# Set the row to the center row
+	row = CENTER_ROW
+	# Update the target
+	update_target_row()
+
+# Turn right method
+func turn_right() -> void:
+	# Match the direction the player is currently facing
+	match facing:
+		"Forward":
+			# Set facing to right and set the current angle
+			facing = "Right"
+			current_angle = -PI / 2.0
+		"Right":
+			# Set facing to back and set the current angle
 			facing = "Back"
-			# Set the angle
-			current_angle = -PI
-	# Set the row to the third row
-	row = 2
+			current_angle = PI
+		"Back":
+			# Set facing to left and set the current angle
+			facing = "Left"
+			current_angle = PI / 2.0
+		"Left":
+			# Set facing to forward and set the current angle
+			facing = "Forward"
+			current_angle = 0.0
+	# Set the row to center row and update target
+	row = CENTER_ROW
+	update_target_row()
 
 # Runs 60 times a second
 func _physics_process(delta: float) -> void:
-	# Set the rotation to the angle given under current angle
-	global_rotation.y = lerp_angle(global_rotation.y, current_angle, TURN_SPEED * delta)
-	# If player is not on the floor, apply gravity
-	if not is_on_floor(): velocity += get_gravity() * delta
-	# If Space is pressed and player is on the floor:
+	# If not on floor, apply gravity
+	if not is_on_floor():
+		velocity += get_gravity() * delta
+	# If you press space and are on floor, apply jump velocity
 	if Input.is_action_just_pressed("Space") and is_on_floor():
-		# Set velocity for jump
 		velocity.y = JUMP_VELOCITY
-	# Set the row rotation
-	rows.global_rotation = Vector3(0, current_angle, 0)
+	# Smoothly rotate the player
+	global_rotation.y = lerp_angle(global_rotation.y, current_angle, TURN_SPEED * delta)
+	# Smoothly rotate the rows
+	rows.global_rotation.y = lerp_angle(rows.global_rotation.y, current_angle, TURN_SPEED * delta)
 	# Match the facing direction
 	match facing:
 		"Forward":
-			# Move the player and rows
+			# Apply forward movement
+			velocity.x = 0.0
 			velocity.z = -SPEED
 			global_position.x = move_toward(global_position.x, current_row_loc.x, STRAFE_SPEED * delta)
 			rows.global_position.z = global_position.z
 		"Back":
-			# Move the player and rows
-			velocity.x = SPEED
+			# Apply backwards movement
+			velocity.x = 0.0
+			velocity.z = SPEED
 			global_position.x = move_toward(global_position.x, current_row_loc.x, STRAFE_SPEED * delta)
 			rows.global_position.z = global_position.z
 		"Left":
-			# Move the player and rows
+			# Apply left movement
 			velocity.x = -SPEED
+			velocity.z = 0.0
 			global_position.z = move_toward(global_position.z, current_row_loc.z, STRAFE_SPEED * delta)
 			rows.global_position.x = global_position.x
 		"Right":
-			# Move the player and rows
+			# Apply right movement
 			velocity.x = SPEED
+			velocity.z = 0.0
 			global_position.z = move_toward(global_position.z, current_row_loc.z, STRAFE_SPEED * delta)
 			rows.global_position.x = global_position.x
-	# Apply velocity
+	# Apply the movement
 	move_and_slide()

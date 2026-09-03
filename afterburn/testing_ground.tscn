@@ -11,12 +11,13 @@ script = ExtResource("1_71d8t")
 transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
 shadow_enabled = true
 
-[node name="StreetTemplate" parent="." unique_id=82585562 instance=ExtResource("3_nxusl")]
-starting_area = true
-
-[node name="StreetTemplate2" parent="." unique_id=1203064645 instance=ExtResource("3_nxusl")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, -57)
-starting_area = true
-
 [node name="Player" parent="." unique_id=196411886 instance=ExtResource("1_q4otm")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5893574, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, 1)
+
+[node name="Roads" type="Node3D" parent="." unique_id=564614269]
+
+[node name="StreetTemplate" parent="Roads" unique_id=82585562 instance=ExtResource("3_nxusl")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+starting_street_node = true
+
+[connection signal="entered" from="Roads/StreetTemplate" to="." method="_on_street_template_entered"]
