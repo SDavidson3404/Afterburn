@@ -2,18 +2,36 @@
 
 [ext_resource type="Script" uid="uid://bpvo8cgevcra4" path="res://Player/player.gd" id="1_l8h54"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_fnnny"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r8tgl"]
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_fnnny"]
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_r8tgl"]
 
-[node name="Player" type="CharacterBody3D" unique_id=1134854564]
+[node name="Player" type="Node3D" unique_id=196411886]
+
+[node name="Rows" type="Node3D" parent="." unique_id=1152326233]
+
+[node name="Row 1" type="Node3D" parent="Rows" unique_id=1753781816]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0)
+
+[node name="Row 2" type="Node3D" parent="Rows" unique_id=1094331621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+
+[node name="Row 3" type="Node3D" parent="Rows" unique_id=809996234]
+
+[node name="Row 4" type="Node3D" parent="Rows" unique_id=1932870943]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+
+[node name="Row 5" type="Node3D" parent="Rows" unique_id=374044592]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
+
+[node name="CharacterBody3D" type="CharacterBody3D" parent="." unique_id=607464147]
 script = ExtResource("1_l8h54")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=161550239]
-shape = SubResource("CapsuleShape3D_fnnny")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D" unique_id=1107740713]
+shape = SubResource("CapsuleShape3D_r8tgl")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1072121614]
-mesh = SubResource("CapsuleMesh_fnnny")
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CharacterBody3D" unique_id=1886744333]
+mesh = SubResource("CapsuleMesh_r8tgl")
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=1866604048]
-transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.25881904, 0, -0.25881904, 0.9659258, 0, 0.8946419, 0)
+[node name="Camera3D" type="Camera3D" parent="CharacterBody3D" unique_id=1996423927]
+transform = Transform3D(1, 0, 0, 0, 0.96592593, 0.2588191, 0, -0.2588191, 0.96592593, 0, 1, 0)
