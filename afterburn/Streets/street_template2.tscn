@@ -75,4 +75,22 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 116.59091, 0, -180.18182)
 [node name="LeftLink10" type="Node3D" parent="Links" unique_id=652534986]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 146.59091, 0, -180.18182)
 
+[node name="CollectiblesLinks" type="Node3D" parent="." unique_id=812077965]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="CollectibleSpawn" type="Node3D" parent="CollectiblesLinks" unique_id=192660741]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -25)
+
+[node name="CollectibleSpawn2" type="Node3D" parent="CollectiblesLinks" unique_id=1704759548]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -93)
+
+[node name="CollectibleSpawn3" type="Node3D" parent="CollectiblesLinks" unique_id=320755748]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -131)
+
+[node name="CollectibleSpawn4" type="Node3D" parent="CollectiblesLinks" unique_id=312919947]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 61, 0, -171)
+
+[node name="CollectibleSpawn5" type="Node3D" parent="CollectiblesLinks" unique_id=1381882884]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 144, 0, -175)
+
 [connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]

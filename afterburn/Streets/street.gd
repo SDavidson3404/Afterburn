@@ -3,6 +3,7 @@ class_name street
 
 var has_been_entered: bool = false
 @onready var links: Node3D = $Links
+@onready var collectibles_links: Node3D = $CollectiblesLinks
 signal entered(node_to_keep: street)
 @onready var area: Area3D = $Area3D
 @export var starting_street_node: bool = false
@@ -16,8 +17,8 @@ func find_link_loc(Link: Node3D):
 		if child == Link:
 			return child.global_transform
 
-func get_links():
-	return links.get_children()
+func get_links(link: Node3D):
+	return link.get_children()
 
 func _on_area_3d_body_entered(body: Node3D) -> void:
 	if body.is_in_group("Player") and not has_been_entered:

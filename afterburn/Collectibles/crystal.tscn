@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://bwrujnxvsre36"]
+
+[ext_resource type="Script" uid="uid://dd8g3jlj8mecp" path="res://Collectibles/crystal.gd" id="1_2kwii"]
+[ext_resource type="PackedScene" uid="uid://s7vdp82ujmq7" path="res://Collectibles/collectible_template.tscn" id="1_lqwqg"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_2kwii"]
+height = 1.0
+
+[node name="Crystal" type="Node3D" unique_id=1056975304]
+script = ExtResource("1_2kwii")
+Name = "Crystal"
+
+[node name="CollectibleTemplate" parent="." unique_id=1412815026 instance=ExtResource("1_lqwqg")]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CollectibleTemplate" unique_id=2123246371]
+mesh = SubResource("CapsuleMesh_2kwii")
+
+[connection signal="body_entered" from="CollectibleTemplate" to="." method="_on_body_entered"]

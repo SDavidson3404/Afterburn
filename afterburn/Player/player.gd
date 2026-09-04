@@ -3,6 +3,7 @@ class_name Player
 
 @onready var camera: Camera3D = $Camera3D # The camera
 @onready var rows: Node3D = $"../Rows" # The rows parent
+@onready var score_label: Label = $UI/ScoreLabel
 const MIN_ROW: int = 0 # The minimum row
 const MAX_ROW: int = 4 # The maximum row
 const CENTER_ROW: int = 2 # The center row
@@ -14,6 +15,7 @@ var row: int = CENTER_ROW # The current row
 var facing: String = "Forward"
 var current_row_loc: Vector3= Vector3.ZERO
 var current_angle: float = 0.0
+var score: int = 0
 
 # Runs on startup
 func _ready() -> void:
@@ -114,6 +116,7 @@ func turn_right() -> void:
 
 # Runs 60 times a second
 func _physics_process(delta: float) -> void:
+	score_label.text = ("SCORE: " + str(score))
 	# If not on floor, apply gravity
 	if not is_on_floor():
 		velocity += get_gravity() * delta
@@ -152,3 +155,11 @@ func _physics_process(delta: float) -> void:
 			rows.global_position.x = global_position.x
 	# Apply the movement
 	move_and_slide()
+
+func connect_collectible(collectible_node: collectible):
+	collectible_node.pick_up.connect(collect_collectible)
+
+func collect_collectible(collectible_name: String):
+	match collectible_name:
+		"Crystal":
+			score += 1
