@@ -8,8 +8,29 @@ size = Vector3(19, 1, 180)
 [sub_resource type="BoxMesh" id="BoxMesh_mlvgy"]
 size = Vector3(19, 1, 180)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_71d8t"]
+size = Vector3(161.021, 141.51953, 199)
+
+[sub_resource type="BoxMesh" id="BoxMesh_nxusl"]
+size = Vector3(11, 161.50635, 61)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_dh5k5"]
+size = Vector3(11.586792, 41, 85)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vl2hd"]
+size = Vector3(11.449219, 41, 56)
+
+[sub_resource type="BoxMesh" id="BoxMesh_c6g42"]
+size = Vector3(21.87793, 1, 51)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dh5k5"]
+albedo_color = Color(0.36282945, 0.36282945, 0.36282945, 1)
+
 [sub_resource type="BoxShape3D" id="BoxShape3D_c6g42"]
 size = Vector3(19, 15, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_dh5k5"]
+size = Vector3(330.35733, 6.2734375, 407.80994)
 
 [node name="StreetTemplate" type="StaticBody3D" unique_id=82585562]
 script = ExtResource("1_c6g42")
@@ -30,20 +51,46 @@ shape = SubResource("BoxShape3D_i0fns")
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 80.5, 0, -171)
 mesh = SubResource("BoxMesh_mlvgy")
 
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="." unique_id=123353487]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, 89.968445, -19.000008, -90.75977)
+shape = SubResource("BoxShape3D_71d8t")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=1062959564]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 14.916016, 18.085331, -80.79028)
+mesh = SubResource("BoxMesh_nxusl")
+
+[node name="CollisionShape3D4" type="CollisionShape3D" parent="." unique_id=767220864]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, -15.28691, 35, -20.5)
+shape = SubResource("BoxShape3D_dh5k5")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="." unique_id=1104663448]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -15.28691, 20, -20.5)
+mesh = SubResource("BoxMesh_vl2hd")
+
+[node name="MeshInstance3D5" type="MeshInstance3D" parent="." unique_id=21381815]
+transform = Transform3D(-4.371139e-08, 1, -4.371139e-08, 0, -4.371139e-08, -1, -1, -4.371139e-08, 1.9106855e-15, 90.09887, 18.085331, -156.09756)
+mesh = SubResource("BoxMesh_nxusl")
+
+[node name="MeshInstance3D6" type="MeshInstance3D" parent="." unique_id=1953585038]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.87167835, 20.95066, -5.590007)
+mesh = SubResource("BoxMesh_c6g42")
+surface_material_override/0 = SubResource("StandardMaterial3D_dh5k5")
+
+[node name="MeshInstance3D8" type="MeshInstance3D" parent="." unique_id=12456948]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -15.28691, 20, -186.5)
+mesh = SubResource("BoxMesh_vl2hd")
+
 [node name="Area3D" type="Area3D" parent="." unique_id=1732015009]
 monitoring = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1252914310]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, -7)
 shape = SubResource("BoxShape3D_c6g42")
 
 [node name="Links" type="Node3D" parent="." unique_id=368738239]
 
 [node name="EndLink2" type="Node3D" parent="Links" unique_id=346408719]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -180)
-
-[node name="LeftLink" type="Node3D" parent="Links" unique_id=81956118]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -30)
 
 [node name="LeftLink2" type="Node3D" parent="Links" unique_id=1903217883]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -60)
@@ -58,7 +105,7 @@ transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.5, 0, -150)
 
 [node name="EndLink4" type="Node3D" parent="Links" unique_id=1678099867]
-transform = Transform3D(1.1924881e-08, 0, -1, 0, 1, 0, 1, 0, 1.1924881e-08, 170.59091, 0, -170.68182)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 170.59091, 0, -170.68182)
 
 [node name="LeftLink6" type="Node3D" parent="Links" unique_id=1417670949]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.590908, 0, -180.18182)
@@ -74,6 +121,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 116.59091, 0, -180.18182)
 
 [node name="LeftLink10" type="Node3D" parent="Links" unique_id=652534986]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 146.59091, 0, -180.18182)
+
+[node name="Start" type="Node3D" parent="Links" unique_id=1685524793]
 
 [node name="CollectiblesLinks" type="Node3D" parent="." unique_id=812077965]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
@@ -92,5 +141,97 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 61, 0, -171)
 
 [node name="CollectibleSpawn5" type="Node3D" parent="CollectiblesLinks" unique_id=1381882884]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 144, 0, -175)
+
+[node name="MeshInstance3D7" type="MeshInstance3D" parent="." unique_id=873298352]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.305523, 46.58738, -175.9205)
+mesh = SubResource("BoxMesh_dh5k5")
+surface_material_override/0 = SubResource("StandardMaterial3D_dh5k5")
+
+[node name="Lights" type="Node3D" parent="." unique_id=454643619]
+
+[node name="SpotLight3D" type="SpotLight3D" parent="Lights" unique_id=928512180]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -20.152498)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D2" type="SpotLight3D" parent="Lights" unique_id=2083866636]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -55.929222)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D3" type="SpotLight3D" parent="Lights" unique_id=337138361]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -92.92922)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D4" type="SpotLight3D" parent="Lights" unique_id=1839767802]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -128.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D5" type="SpotLight3D" parent="Lights" unique_id=350811643]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -158.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D6" type="SpotLight3D" parent="Lights" unique_id=257622081]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 26, 37.714764, -168.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D7" type="SpotLight3D" parent="Lights" unique_id=115599454]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 65, 37.714764, -167.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D8" type="SpotLight3D" parent="Lights" unique_id=542997508]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 104, 37.714764, -164.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D9" type="SpotLight3D" parent="Lights" unique_id=565556596]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 149, 37.714764, -164.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="CollisionShape3D5" type="CollisionShape3D" parent="." unique_id=1648111518]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, -15.28691, 35, -186.5)
+shape = SubResource("BoxShape3D_dh5k5")
 
 [connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]

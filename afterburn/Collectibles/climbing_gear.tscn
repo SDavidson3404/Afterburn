@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://d3sacg7flphdl"]
+
+[ext_resource type="Script" uid="uid://b4bru884vuspc" path="res://Collectibles/climbing_gear.gd" id="1_upg6w"]
+[ext_resource type="PackedScene" uid="uid://s7vdp82ujmq7" path="res://Collectibles/collectible_template.tscn" id="2_trt6a"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_jp6wc"]
+height = 1.0
+
+[node name="ClimbingGear" type="Node3D" unique_id=2024489451]
+script = ExtResource("1_upg6w")
+
+[node name="CollectibleTemplate" parent="." unique_id=1412815026 instance=ExtResource("2_trt6a")]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1758330092]
+mesh = SubResource("CylinderMesh_jp6wc")
+
+[connection signal="body_entered" from="CollectibleTemplate" to="." method="_on_body_entered"]

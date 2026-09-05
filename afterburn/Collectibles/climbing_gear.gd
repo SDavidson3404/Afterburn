@@ -8,5 +8,5 @@ func pick_up_effect():
 	super()
 	for child in get_tree().get_first_node_in_group("Player").get_children():
 		if child is Player:
-			child.speed += 5
+			child.can_climb = true
 	queue_free()

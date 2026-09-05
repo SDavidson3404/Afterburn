@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://cgotddx0tfuk5"]
+
+[ext_resource type="Script" uid="uid://dnw5uc4limwyi" path="res://Streets/building.gd" id="1_tppo5"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_i0fns"]
+size = Vector3(42, 41, 85)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mlvgy"]
+size = Vector3(42, 41, 86)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_2jqot"]
+
+[node name="StreetTemplate" type="StaticBody3D" unique_id=82585562 groups=["Building"]]
+script = ExtResource("1_tppo5")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=805161773]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, 0, 35.000004, -20.5)
+shape = SubResource("BoxShape3D_i0fns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1200330379]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 35, -20.499998)
+mesh = SubResource("BoxMesh_mlvgy")
+
+[node name="Links" type="Node3D" parent="." unique_id=540514132]
+
+[node name="Start" type="Node3D" parent="Links" unique_id=446746258]
+
+[node name="Area3D" type="Area3D" parent="." unique_id=202494483]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1833507321]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+shape = SubResource("BoxShape3D_2jqot")
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]

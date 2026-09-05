@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://dfo1qt0w8fgn7"]
+
+[ext_resource type="Script" uid="uid://ld5ms77xxdma" path="res://Collectibles/boost.gd" id="1_kd3af"]
+[ext_resource type="PackedScene" uid="uid://s7vdp82ujmq7" path="res://Collectibles/collectible_template.tscn" id="2_4xj2x"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
+
+[node name="Boost" type="Node3D" unique_id=932985298]
+script = ExtResource("1_kd3af")
+
+[node name="CollectibleTemplate" parent="." unique_id=1412815026 instance=ExtResource("2_4xj2x")]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1879888929]
+mesh = SubResource("BoxMesh_jp6wc")
+
+[connection signal="body_entered" from="CollectibleTemplate" to="." method="_on_body_entered"]

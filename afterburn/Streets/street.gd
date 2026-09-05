@@ -7,6 +7,7 @@ var has_been_entered: bool = false
 signal entered(node_to_keep: street)
 @onready var area: Area3D = $Area3D
 @export var starting_street_node: bool = false
+var collectibles: Array = []
 
 func _ready() -> void:
 	if starting_street_node:
