@@ -3,21 +3,21 @@
 [ext_resource type="Script" uid="uid://cc62laupq6bqf" path="res://Streets/ramp.gd" id="1_uoj7s"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
-size = Vector3(19, 3, 6)
+size = Vector3(19, 1, 6)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
-size = Vector3(19, 3, 6)
+size = Vector3(19, 1, 6)
 
 [node name="Ramp" type="Area3D" unique_id=663125361]
 transform = Transform3D(1, 0, 0, 0, 0.70710677, -0.70710677, 0, 0.70710677, 0.70710677, 0, 0, 0)
 script = ExtResource("1_uoj7s")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=543418022]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.49999997)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.49999997)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1690639552]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.99999994, 0.50000006)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1920929e-07, 0.50000006)
 shape = SubResource("BoxShape3D_jp6wc")
 
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]

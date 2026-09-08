@@ -4,40 +4,36 @@ class_name Player
 @onready var camera: Camera3D = $Camera3D # The camera
 @onready var rows: Node3D = $"../Rows" # The rows parent
 @onready var score_label: Label = $UI/ScoreLabel
-@onready var row_1: MeshInstance2D = $"../Rows/Row 1/Row1"
-@onready var row_2: MeshInstance2D = $"../Rows/Row 2/Row2"
-@onready var row_3: MeshInstance2D = $"../Rows/Row 3/Row3"
-@onready var row_4: MeshInstance2D = $"../Rows/Row 4/Row4"
-@onready var row_5: MeshInstance2D = $"../Rows/Row 5/Row5"
+@onready var row_squares: Node2D = $UI/Row_Squares
 @onready var climbing_gear: MeshInstance2D = $UI/MeshInstance2D
-var row_squares: Array = []
 const MIN_ROW: int = 0 # The minimum row
 const MAX_ROW: int = 4 # The maximum row
 const CENTER_ROW: int = 2 # The center row
 const JUMP_VELOCITY: float = 5.0 # The velocity of the jump
 const STRAFE_SPEED: float = 15.0  # The speed of strafing
 const TURN_SPEED: float = 10.0 # The speed of turning
-var speed: float = 15.0 # The speed of movement
+const GRAVITY: float = 10.0
 const TILT_UPPER_LIMIT: float = deg_to_rad(90)
 const TILT_LOWER_LIMIT: float = deg_to_rad(-90)
 const YAW_MAX_LIMIT: float = deg_to_rad(45)
 const YAW_MIN_LIMIT: float = deg_to_rad(-45)
 const MOUSE_SENS: float = 0.005
+var speed: float = 15.0 # The speed of movement
 var camera_rotation: Vector2 = Vector2.ZERO
 var row: int = CENTER_ROW # The current row
 var facing: String = "Forward"
 var current_row_loc: Vector3= Vector3.ZERO
 var current_angle: float = 0.0
 var score: int = 0
-var can_climb: bool = false
+var can_climb: bool = true
 var climbing: bool = false
 var previous_loc: Vector3
 var lost: bool = false
+var ending_climbing: bool = false
 
 # Runs on startup
 func _ready() -> void:
 	previous_loc = global_position
-	row_squares.append_array([row_1, row_2, row_3, row_4, row_5])
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	# If there aren't enough rows, push an error
 	if rows.get_child_count() <= MAX_ROW:
@@ -147,31 +143,21 @@ func turn_right() -> void:
 
 # Runs 60 times a second
 func _physics_process(delta: float) -> void:
+	if ending_climbing:
+		velocity.y = 0
+		ending_climbing = false
+		climbing = false
 	if can_climb:
 		climbing_gear.modulate = Color(1.0, 1.0, 1.0, 0.502)
 	update_row_square()
 	score_label.text = ("SCORE: " + str(score))
 	# If not on floor, apply gravity
-	if not is_on_floor() and not climbing:
-		velocity += get_gravity() * delta
 	# If you press space and are on floor, apply jump velocity
-	if Input.is_action_just_pressed("Space") and is_on_floor() and not climbing:
-		velocity.y = JUMP_VELOCITY
 	# Smoothly rotate the player
 	if not climbing:
 		global_rotation.y = lerp_angle(global_rotation.y, current_angle, TURN_SPEED * delta)
 		# Smoothly rotate the rows
 		rows.global_rotation.y = lerp_angle(rows.global_rotation.y, current_angle, TURN_SPEED * delta)
-	else:
-		match facing:
-			"UpX":
-				global_rotation.z = 90
-			"Up-X":
-				global_rotation.z = -90
-			"UpZ":
-				global_rotation.x = -90
-			"Up-Z":
-				global_rotation.x = 90
 	# Match the facing direction
 	match facing:
 		"Forward":
@@ -226,7 +212,27 @@ func _physics_process(delta: float) -> void:
 			velocity.x = 0.0
 			global_position.x = move_toward(global_position.x, current_row_loc.x, STRAFE_SPEED * delta)
 			rows.global_position.y = global_position.y
+	if Input.is_action_just_pressed("Space") and is_on_floor() and not climbing:
+		velocity.y += JUMP_VELOCITY
 	# Apply the movement
+	if not is_on_floor() and not climbing:
+		velocity.y -= GRAVITY * delta
+		global_rotation.z = 0
+		global_rotation.x = 0
+	if not is_on_wall() and climbing:
+		match facing:
+			"UpX":
+				velocity.x -= GRAVITY * delta
+				global_rotation.x = deg_to_rad(90)
+			"Up-X":
+				velocity.x += GRAVITY * delta
+				global_rotation.x = deg_to_rad(-90)
+			"UpY":
+				velocity.z -= GRAVITY * delta 
+				global_rotation.z = deg_to_rad(90)
+			"Up-Y":
+				velocity.z += GRAVITY * delta 
+				global_rotation.x = deg_to_rad(-90)
 	move_and_slide()
 	if global_position == previous_loc and not lost:
 		lose()
@@ -246,12 +252,11 @@ func BOOST():
 	speed -= 10
 
 func update_row_square():
-	if not row_squares.is_empty():
-		for child in row_squares:
-			if child.name == ("Row" + str(row + 1)):
-				child.modulate = Color(1.0, 1.0, 1.0, 1.0)
-			else:
-				child.modulate = Color(0.0, 0.0, 0.0, 1.0)
+	for child in row_squares.get_children():
+		if child.name == ("Row" + str(row + 1)):
+			child.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		else:
+			child.modulate = Color(0.0, 0.0, 0.0, 1.0)
 
 func check_climb_dir():
 	var space = get_world_3d().direct_space_state
@@ -275,3 +280,16 @@ func begin_climb():
 func lose():
 	lost = true
 	print("YOU LOST")
+
+func turn_normal():
+	climbing = false
+	ending_climbing = true
+	match facing:
+		"UpX":
+			facing = "Right"
+		"Up-X":
+			facing = "Left"
+		"UpZ":
+			facing = "Back"
+		"Up-Z":
+			facing = "Forward"

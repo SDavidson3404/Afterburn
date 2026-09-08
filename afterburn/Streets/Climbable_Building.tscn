@@ -4,25 +4,35 @@
 [ext_resource type="PackedScene" uid="uid://fistklve230l" path="res://Streets/ramp.tscn" id="1_sn2m0"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_i0fns"]
-size = Vector3(42, 41, 175)
+size = Vector3(27, 41, 175)
 
 [sub_resource type="BoxMesh" id="BoxMesh_mlvgy"]
-size = Vector3(42, 41, 176)
+size = Vector3(27, 41, 176)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_223tt"]
+size = Vector3(43, 3, 8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tppo5"]
+size = Vector3(2, 43, 196)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tppo5"]
+size = Vector3(2, 41, 201)
 
 [node name="StreetTemplate" type="StaticBody3D" unique_id=82585562 groups=["Building"]]
 script = ExtResource("1_7xbye")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=805161773]
-transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, 0, 80.00001, -20.5)
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, -0.5, 80.00001, -20.5)
 shape = SubResource("BoxShape3D_i0fns")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1200330379]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 80, -20.499996)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -0.5, 80, -20.499996)
 mesh = SubResource("BoxMesh_mlvgy")
 
 [node name="Ramp" parent="." unique_id=663125361 instance=ExtResource("1_sn2m0")]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, -0.70710677, 0, 0.70710677, 0.70710677, 0, 0.59889925, 0)
 
 [node name="Links" type="Node3D" parent="." unique_id=272943665]
 
@@ -35,4 +45,19 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -11)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
 shape = SubResource("BoxShape3D_jp6wc")
 
+[node name="Rotate" type="Area3D" parent="." unique_id=1616271815]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rotate" unique_id=172510618]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 174, 0.5)
+shape = SubResource("BoxShape3D_223tt")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="." unique_id=1880312608]
+transform = Transform3D(-4.371139e-08, -1.0000001, 0, 0, 0, -1.0000001, 1, -4.3711392e-08, 0, 1.9999992, 70.5, -1)
+shape = SubResource("BoxShape3D_tppo5")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=171134540]
+transform = Transform3D(-4.371139e-08, -1, 4.371139e-08, 0, -4.371139e-08, -1, 1, -4.371139e-08, 1.9106855e-15, 0.9999988, 68, -1)
+mesh = SubResource("BoxMesh_tppo5")
+
 [connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
+[connection signal="body_entered" from="Rotate" to="." method="_on_rotate_body_entered"]
