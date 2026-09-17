@@ -62,7 +62,7 @@ func create_stats_table() -> void:
 		drone_crash INTEGER
 	);
 	"""
-	db.query(stats_query)
+	db.query(stats_query) # Builds the stats table
 
 # Distance traveling tracker
 func add_distance(pixels_moved: float) -> void: # Tracks the distance traveled per frame. Called by player.gd every frame during active gameplay
@@ -139,3 +139,31 @@ func reset_run_stats() -> void: # Called after game over UI finishes executing
 	robot_crash = 0
 	scaffolding_crash = 0
 	drone_crash = 0
+
+# Lifetime player stats
+func lifetime_stats() -> Dictionary: # Called when the player accesses their profile in the menu
+	# Selects and calculates:
+	# 1. The highest stats the player reached in one run
+	# 2. The total accumulated stats from every run
+	var lifetime_query: String = """
+	SELECT
+		COUNT(*) AS total_runs,
+		COALESCE(MAX(total_score), 0) AS high_score,
+		COALESCE(MAX(total_distance), 0) AS max_distance,
+		COALESCE(MAX(power_crystals), 0) AS max_crystals,
+		COALESCE(MAX(jump_obstacle + slide_obstacle + dash_obstacle), 0) AS max_dodges,
+		COALESCE(SUM(total_distance), 0) AS total_distance,
+		COALESCE(SUM(power_crystals), 0) AS total_crystals,
+		COALESCE(SUM(gadgets), 0) AS total_gadgets,
+		COALESCE(SUM(jump_obstacle + slide_obstacle + dash_obstacle), 0) AS total_dodges,
+		COALESCE(SUM(robot_crash), 0) AS robot_crashes,
+		COALESCE(SUM(scaffolding_crash), 0) AS scaffolding_crashes,
+		COALESCE(SUM(drone_crash), 0) AS drone_crash
+	FROM stats;
+	"""
+	# COALESCE(..., 0) is used in case the player tries to access their stats while one or more values have no saved data yet
+	db.query(lifetime_query) # Runs the calculations and temporarily stores it in memory
+	# Crash prevention in case the query fails or the database either isn't open or initialized
+	if db.query_result.size() > 0: # Checks if the result contains at least one row
+		return db.query_result[0] # Returns row [0], which contains the stats
+	return {} # returns an empty dictionary if the query fails
