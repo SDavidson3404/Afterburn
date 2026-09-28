@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://b7ukaosj3sqf1" path="res://testing_ground.gd" id="1_71d8t"]
 [ext_resource type="PackedScene" uid="uid://bohcd45ewcaui" path="res://Player/player.tscn" id="1_q4otm"]
 [ext_resource type="PackedScene" uid="uid://bfyf2n3db7drf" path="res://Streets/street_template.tscn" id="3_nxusl"]
+[ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
 
 [node name="Testing Ground" type="Node3D" unique_id=1583271204]
 script = ExtResource("1_71d8t")
@@ -16,3 +17,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
 starting_street_node = true
 
 [node name="Collectibles" type="Node3D" parent="." unique_id=1196056530]
+
+[node name="Power" type="Node" parent="." unique_id=638170115]
+script = ExtResource("4_nxusl")

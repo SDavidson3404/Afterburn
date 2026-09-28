@@ -2,13 +2,10 @@ extends Node
 
 var db: SQLite # The database variable
 
-# Conversion variables
-const PIXELS_PER_POINT: float = 32.0 # 32 pixels = 1 point. Low pixel count keeps the score ticking up as the player moves
-const PIXELS_PER_METER: float = 100.0 # 100 pixels = 1 meter
-
 # Distance and distance scoring variables
-var total_distance_meters: int = 0 # Tracks the total distance in meters the player has moved
-var pixels_traveled: float = 0.0 # Tracks the total distance in pixels the player has moved
+const POINTS_PER_METER: float = 1.0 # 1 meter equals 1 points added to score
+var total_distance_meters: int = 0 # Tracks the total distance in meters the player has moved saved to stats
+var meters_traveled: float = 0.0 # Tracks the total distance in meters the player has moved across frames
 var travel_score: int = 0 # The points the player gets from moving
 
 # Dodge scoring variables
@@ -29,7 +26,7 @@ var robot_crash: int = 0 # The number of times crashed into robots
 var scaffolding_crash: int = 0 # The number of times crashed into scaffolding
 var drone_crash: int = 0 # The number of times crashed into drones
 
-# Called when the node enters the scene tree for the first time
+## Called when the node enters the scene tree for the first time
 func _ready() -> void:
 	db = SQLite.new() # Initialize database
 	db.path = "user://game_data.db" # The file address used
@@ -64,14 +61,16 @@ func create_stats_table() -> void:
 	"""
 	db.query(stats_query) # Builds the stats table
 
-# Distance traveling tracker
-func add_distance(pixels_moved: float) -> void: # Tracks the distance traveled per frame. Called by player.gd every frame during active gameplay
-	pixels_traveled += pixels_moved # Adds the distance from each frame to the total
-	total_distance_meters = int(pixels_traveled / PIXELS_PER_METER) # Total distance divided by 100 equals 1 meter added to stats
-	travel_score = int(pixels_traveled / PIXELS_PER_POINT) # Total distance divided by 32 equals 1 point added to score
+## Distance traveling tracker
+## Called by power.gd every frame during active gameplay
+func add_distance(meters_moved: float) -> void: # Tracks the distance traveled per frame
+	meters_traveled += meters_moved # Adds the distance from each frame to the total
+	total_distance_meters = int(meters_traveled) # Scores total whole meters
+	travel_score = int(total_distance_meters * POINTS_PER_METER) # Calculates score from meters moved
 
-# Obstacle dodging tracker
-func add_dodge(dodge_type: String = "") -> void: # Called by obstacle collision/detection whenever the player dodges an obstacle
+## Obstacle dodging tracker
+## Called by obstacle collision/detection whenever the player dodges an obstacle
+func add_dodge(dodge_type: String = "") -> void:
 	dodge_score += POINTS_PER_DODGE # Adds 10 points to score
 	# Depending on the dodge, adds 1 of that type to current run data
 	if dodge_type == "jump":
@@ -81,21 +80,25 @@ func add_dodge(dodge_type: String = "") -> void: # Called by obstacle collision/
 	elif dodge_type == "dash":
 		dash_obstacle += 1
 
-# Crystal collecting tracker
-func add_crystal() -> void: # Called by crystal.gd whenever the player collects a power crystal
+## Crystal collecting tracker
+## Called by crystal.gd whenever the player collects a power crystal
+func add_crystal() -> void:
 	crystal_score += CRYSTAL_POINTS # Adds 100 points to score
 	power_crystals += 1
 
-# Gadget collecting tracker
-func add_gadget() -> void: # Called when the player picks up a gadget
+## Gadget collecting tracker
+## Called when the player picks up a gadget
+func add_gadget() -> void:
 	gadgets += 1
 
-# Display total score
-func display_score() -> int: # Called by the UI every frame during active gameplay
+## Display total score
+## Called by the UI every frame during active gameplay
+func display_score() -> int:
 	return (travel_score + dodge_score + crystal_score) # Adds all scoring systems together, resulting in total score
 
-# Crash tracker
-func player_crash(crash_type: String = "") -> void: # Called when the player crashes
+## Crash tracker
+## Called when the player crashes
+func player_crash(crash_type: String = "") -> void:
 	# Depending on the cause of crash, adds 1 of that to the current run data
 	if crash_type == "robot":
 		robot_crash += 1
@@ -104,8 +107,9 @@ func player_crash(crash_type: String = "") -> void: # Called when the player cra
 	elif crash_type == "drone":
 		drone_crash += 1
 
-# Saves the run into the database
-func save_run() -> Dictionary: # Called by the game over UI
+## Saves the run into the database
+## Called by the game over UI
+func save_run() -> Dictionary:
 	var run_data: Dictionary = {
 		"total_distance": total_distance_meters,
 		"travel_score": travel_score,
@@ -124,10 +128,11 @@ func save_run() -> Dictionary: # Called by the game over UI
 	db.insert_row("stats", run_data) # Saves the current run data into stats table
 	return run_data # Displays only the data from the current run onto the game over UI
 
-# Resets the stats from the current run back to 0 for a new run
-func reset_run_stats() -> void: # Called after game over UI finishes executing
+## Resets the stats from the current run back to 0 for a new run
+## Called after game over UI finishes executing
+func reset_run_stats() -> void:
 	total_distance_meters = 0
-	pixels_traveled = 0.0
+	meters_traveled = 0.0
 	travel_score = 0
 	dodge_score = 0
 	crystal_score = 0
@@ -140,8 +145,9 @@ func reset_run_stats() -> void: # Called after game over UI finishes executing
 	scaffolding_crash = 0
 	drone_crash = 0
 
-# Lifetime player stats
-func lifetime_stats() -> Dictionary: # Called when the player accesses their profile in the menu
+## Lifetime player stats
+## Called when the player accesses their profile in the menu
+func lifetime_stats() -> Dictionary:
 	# Selects and calculates:
 	# 1. The highest stats the player reached in one run
 	# 2. The total accumulated stats from every run
