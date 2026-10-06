@@ -1,45 +1,44 @@
 extends Node
 
-var db: SQLite # The database variable
+var db: SQLite
 
 # Distance and distance scoring variables
-const POINTS_PER_METER: float = 1.0 # 1 meter equals 1 points added to score
-var total_distance_meters: int = 0 # Tracks the total distance in meters the player has moved saved to stats
-var meters_traveled: float = 0.0 # Tracks the total distance in meters the player has moved across frames
-var travel_score: int = 0 # The points the player gets from moving
+const POINTS_PER_METER: float = 1.0
+var total_distance_meters: int = 0
+var meters_traveled: float = 0.0
+var travel_score: int = 0
 
 # Dodge scoring variables
-const POINTS_PER_DODGE: int = 10 # Jumping over, sliding under, or dashing through obstacles is worth 10 points
-var dodge_score: int = 0 # The points the player gets from dodging
+const POINTS_PER_DODGE: int = 10
+var dodge_score: int = 0
 
 # Crystal scoring variables
-const CRYSTAL_POINTS: int = 100 # Collecting a power crystal is worth 100 points
-var crystal_score: int = 0 # The points the player gets from collecting power crystals
+const CRYSTAL_POINTS: int = 100
+var crystal_score: int = 0
 
-# Other variables to log stats
-var power_crystals: int = 0 # The number of crystals collected
-var gadgets: int = 0 # The number of gadgets collected
-var jump_obstacle: int = 0 # The number of obstacles jumped over
-var slide_obstacle: int = 0 # The number of obstacles slid under
-var dash_obstacle: int = 0 # The number of obstacles dashed through
-var robot_crash: int = 0 # The number of times crashed into robots
-var scaffolding_crash: int = 0 # The number of times crashed into scaffolding
-var drone_crash: int = 0 # The number of times crashed into drones
+# Stat tracking counters
+var power_crystals: int = 0
+var gadgets: int = 0
+var jump_obstacle: int = 0
+var slide_obstacle: int = 0
+var dash_obstacle: int = 0
+var robot_crash: int = 0
+var scaffolding_crash: int = 0
+var drone_crash: int = 0
 
-## Called when the node enters the scene tree for the first time
+## Initializes SQLite database connection and creates required tables
 func _ready() -> void:
-	db = SQLite.new() # Initialize database
-	db.path = "user://game_data.db" # The file address used
-	db.open_db() # Creates the file, or opens if it exists
+	db = SQLite.new()
+	db.path = "user://game_data.db"
+	db.open_db()
 	
 	# Removes unused tables. Will delete later, after each teammate executes this
 	db.query("DROP TABLE IF EXISTS scores;")
 	db.query("DROP TABLE IF EXISTS Scores;")
 	
-	# Execute table creation on startup
 	create_stats_table()
 
-# Create stats table
+## Creates stats table schema if it does not already exist
 func create_stats_table() -> void:
 	var stats_query:="""
 	CREATE TABLE IF NOT EXISTS stats (
@@ -59,20 +58,17 @@ func create_stats_table() -> void:
 		drone_crash INTEGER
 	);
 	"""
-	db.query(stats_query) # Builds the stats table
+	db.query(stats_query)
 
-## Distance traveling tracker
-## Called by power.gd every frame during active gameplay
-func add_distance(meters_moved: float) -> void: # Tracks the distance traveled per frame
-	meters_traveled += meters_moved # Adds the distance from each frame to the total
-	total_distance_meters = int(meters_traveled) # Scores total whole meters
-	travel_score = int(total_distance_meters * POINTS_PER_METER) # Calculates score from meters moved
+## Tracks distance traveled during an active run and updates travel score
+func add_distance(meters_moved: float) -> void:
+	meters_traveled += meters_moved
+	total_distance_meters = int(meters_traveled)
+	travel_score = int(total_distance_meters * POINTS_PER_METER)
 
-## Obstacle dodging tracker
-## Called by obstacle collision/detection whenever the player dodges an obstacle
+## Logs obstacle dodges by type and increments dodge score
 func add_dodge(dodge_type: String = "") -> void:
-	dodge_score += POINTS_PER_DODGE # Adds 10 points to score
-	# Depending on the dodge, adds 1 of that type to current run data
+	dodge_score += POINTS_PER_DODGE
 	if dodge_type == "jump":
 		jump_obstacle += 1
 	elif dodge_type == "slide":
@@ -80,26 +76,21 @@ func add_dodge(dodge_type: String = "") -> void:
 	elif dodge_type == "dash":
 		dash_obstacle += 1
 
-## Crystal collecting tracker
-## Called by crystal.gd whenever the player collects a power crystal
+## Logs collected power crystals and updates crystal score
 func add_crystal() -> void:
-	crystal_score += CRYSTAL_POINTS # Adds 100 points to score
+	crystal_score += CRYSTAL_POINTS
 	power_crystals += 1
 
-## Gadget collecting tracker
-## Called when the player picks up a gadget
+## Increments total gadget pickup count
 func add_gadget() -> void:
 	gadgets += 1
 
-## Display total score
-## Called by the UI every frame during active gameplay
+## Returns total combined score across movement, dodges, and crystals for UI display
 func display_score() -> int:
-	return (travel_score + dodge_score + crystal_score) # Adds all scoring systems together, resulting in total score
+	return (travel_score + dodge_score + crystal_score)
 
-## Crash tracker
-## Called when the player crashes
+## Logs obstacle crashes by type
 func player_crash(crash_type: String = "") -> void:
-	# Depending on the cause of crash, adds 1 of that to the current run data
 	if crash_type == "robot":
 		robot_crash += 1
 	elif crash_type == "scaffolding":
@@ -107,8 +98,7 @@ func player_crash(crash_type: String = "") -> void:
 	elif crash_type == "drone":
 		drone_crash += 1
 
-## Saves the run into the database
-## Called by the game over UI
+## Saves current run stats into database and returns as a dictionary to game over UI
 func save_run() -> Dictionary:
 	var run_data: Dictionary = {
 		"total_distance": total_distance_meters,
@@ -125,11 +115,10 @@ func save_run() -> Dictionary:
 		"scaffolding_crash": scaffolding_crash,
 		"drone_crash": drone_crash
 	}
-	db.insert_row("stats", run_data) # Saves the current run data into stats table
-	return run_data # Displays only the data from the current run onto the game over UI
+	db.insert_row("stats", run_data)
+	return run_data
 
-## Resets the stats from the current run back to 0 for a new run
-## Called after game over UI finishes executing
+## Resets active run stats back to 0
 func reset_run_stats() -> void:
 	total_distance_meters = 0
 	meters_traveled = 0.0
@@ -145,12 +134,8 @@ func reset_run_stats() -> void:
 	scaffolding_crash = 0
 	drone_crash = 0
 
-## Lifetime player stats
-## Called when the player accesses their profile in the menu
+## Queries database for high scores and total lifetime player stats
 func lifetime_stats() -> Dictionary:
-	# Selects and calculates:
-	# 1. The highest stats the player reached in one run
-	# 2. The total accumulated stats from every run
 	var lifetime_query: String = """
 	SELECT
 		COUNT(*) AS total_runs,
@@ -164,12 +149,11 @@ func lifetime_stats() -> Dictionary:
 		COALESCE(SUM(jump_obstacle + slide_obstacle + dash_obstacle), 0) AS total_dodges,
 		COALESCE(SUM(robot_crash), 0) AS robot_crashes,
 		COALESCE(SUM(scaffolding_crash), 0) AS scaffolding_crashes,
-		COALESCE(SUM(drone_crash), 0) AS drone_crash
+		COALESCE(SUM(drone_crash), 0) AS drone_crashes
 	FROM stats;
 	"""
-	# COALESCE(..., 0) is used in case the player tries to access their stats while one or more values have no saved data yet
-	db.query(lifetime_query) # Runs the calculations and temporarily stores it in memory
-	# Crash prevention in case the query fails or the database either isn't open or initialized
-	if db.query_result.size() > 0: # Checks if the result contains at least one row
-		return db.query_result[0] # Returns row [0], which contains the stats
-	return {} # returns an empty dictionary if the query fails
+	# COALESCE(..., 0) displays default values when no run data exists yet
+	db.query(lifetime_query)
+	if db.query_result.size() > 0:
+		return db.query_result[0]
+	return {}

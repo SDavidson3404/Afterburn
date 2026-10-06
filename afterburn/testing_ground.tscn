@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" uid="uid://bohcd45ewcaui" path="res://Player/player.tscn" id="1_q4otm"]
 [ext_resource type="PackedScene" uid="uid://bfyf2n3db7drf" path="res://Streets/street_template.tscn" id="3_nxusl"]
 [ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
+[ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_1phy5"]
+[ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_alr7o"]
 
 [node name="Testing Ground" type="Node3D" unique_id=1583271204]
 script = ExtResource("1_71d8t")
@@ -20,3 +22,9 @@ starting_street_node = true
 
 [node name="Power" type="Node" parent="." unique_id=638170115]
 script = ExtResource("4_nxusl")
+
+[node name="CrystalSpawn" type="Node3D" parent="." unique_id=84290981 node_paths=PackedStringArray("player", "power_manager")]
+script = ExtResource("5_1phy5")
+crystal_scene = ExtResource("6_alr7o")
+player = NodePath("../Player")
+power_manager = NodePath("../Power")
