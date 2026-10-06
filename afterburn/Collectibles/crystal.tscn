@@ -6,6 +6,8 @@
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_2kwii"]
 height = 1.0
 
+[sub_resource type="SphereShape3D" id="SphereShape3D_fnnny"]
+
 [node name="Crystal" type="Node3D" unique_id=1056975304]
 script = ExtResource("1_2kwii")
 Name = "Crystal"
@@ -14,5 +16,8 @@ Name = "Crystal"
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="CollectibleTemplate" unique_id=2123246371]
 mesh = SubResource("CapsuleMesh_2kwii")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="CollectibleTemplate" unique_id=1155668452]
+shape = SubResource("SphereShape3D_fnnny")
 
 [connection signal="body_entered" from="CollectibleTemplate" to="." method="_on_body_entered"]
