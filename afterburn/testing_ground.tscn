@@ -1,22 +1,32 @@
 [gd_scene format=3 uid="uid://csud42wqpny2d"]
 
-[ext_resource type="Script" uid="uid://bptf2xmr8avlg" path="res://ProceduralGenerator.gd" id="1_71d8t"]
+[ext_resource type="Script" uid="uid://bptf2xmr8avlg" path="res://ProceduralGenerator.gd" id="1_nxusl"]
 [ext_resource type="PackedScene" uid="uid://bohcd45ewcaui" path="res://Player/player.tscn" id="1_q4otm"]
 [ext_resource type="PackedScene" uid="uid://bfyf2n3db7drf" path="res://Streets/street_template.tscn" id="3_nxusl"]
+[ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
+[ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
+[ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
 
 [node name="Testing Ground" type="Node3D" unique_id=1583271204]
-script = ExtResource("1_71d8t")
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=482228216]
-transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
-shadow_enabled = true
-
-[node name="StreetTemplate" parent="." unique_id=82585562 instance=ExtResource("3_nxusl")]
-starting_area = true
-
-[node name="StreetTemplate2" parent="." unique_id=1203064645 instance=ExtResource("3_nxusl")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, -57)
-starting_area = true
+script = ExtResource("1_nxusl")
 
 [node name="Player" parent="." unique_id=196411886 instance=ExtResource("1_q4otm")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5893574, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
+
+[node name="Roads" type="Node3D" parent="." unique_id=564614269]
+
+[node name="StreetTemplate" parent="Roads" unique_id=82585562 instance=ExtResource("3_nxusl")]
+starting_street_node = true
+
+[node name="In_Road" type="Node3D" parent="." unique_id=1196056530]
+
+[node name="Side" type="Node3D" parent="." unique_id=1919520812]
+
+[node name="Power" type="Node" parent="." unique_id=638170115]
+script = ExtResource("4_nxusl")
+
+[node name="CrystalSpawner" type="Node3D" parent="." unique_id=1351622964 node_paths=PackedStringArray("player", "power")]
+script = ExtResource("5_ytm02")
+crystal_scene = ExtResource("6_1phy5")
+player = NodePath("../Player")
+power = NodePath("../Power")

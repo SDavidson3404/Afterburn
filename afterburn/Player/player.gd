@@ -1,137 +1,135 @@
-extends CharacterBody3D # Inherits all code from the CharacterBody3D Class
-class_name Player # The name of this class
+extends Node3D
+class_name Player
 
-@onready var camera: Camera3D = $Camera3D # The camera
-@onready var rows: Node3D = $"../Rows" # The node that houses all rows
-const MAX_ROW: int = 4 # The maximum row count
-const ROW_WIDTH: float = 2.0 # The width of each row
+@onready var camera: Camera3D = $Body/Camera3D
+@onready var rows: Node3D = $Rows
+@onready var score_label: Label = $Body/UI/ScoreLabel
+@onready var row_squares: Node2D = $Body/UI/Row_Squares
+@onready var body: CharacterBody3D = $Body
+@onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator"
+@onready var power_meter: ProgressBar = $"Body/UI/Power Meter"
+const MIN_ROW: int = 0 # The minimum row
+const MAX_ROW: int = 4 # The maximum row
+const CENTER_ROW: int = 2 # The center row
 const JUMP_VELOCITY: float = 5.0 # The velocity of the jump
-const STRAFE_SPEED: float = 15.0 # The speed of changing between rows
+const STRAFE_SPEED: float = 15.0  # The speed of strafing
 const TURN_SPEED: float = 10.0 # The speed of turning
-var SPEED: float = 15.0 # The speed of the character
-var row: int = 2 # The current row
-var can_turn: bool = false # A bool for if the player can turn
-var facing: String = "Forward"  # The direction the player is facing
-var current_row_loc: Vector3 # The location of the current row
-var current_angle: float = 0.0 # The angle the character currently is at
+const GRAVITY: float = 10.0
+const TILT_UPPER_LIMIT: float = deg_to_rad(90)
+const TILT_LOWER_LIMIT: float = deg_to_rad(-90)
+const YAW_MAX_LIMIT: float = deg_to_rad(45)
+const YAW_MIN_LIMIT: float = deg_to_rad(-45)
+const MOUSE_SENS: float = 0.005
+var current_speed: float = 15.0 # The speed of movement
+var camera_rotation: Vector2 = Vector2.ZERO
+var row: int = CENTER_ROW # The current row
+var facing: String = "Forward"
+var current_row_loc: Vector3= Vector3.ZERO
+var score: int = 0
+var previous_loc: Vector3
+var lost: bool = false
+var power_node: Node
 
-# Runs on ready, sets current row to row 3
-func _ready() -> void: current_row_loc = rows.get_child(2).global_position
+# Runs on startup
+func _ready() -> void:
+	get_power_node()
+	connect_signals()
+	invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.557)
+	previous_loc = body.global_position
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# If there aren't enough rows, push an error
+	if rows.get_child_count() <= MAX_ROW:
+		push_error("Rows must contain at least 5 row nodes.")
+		return
+	# Set current row location
+	current_row_loc = rows.get_child(row).global_position
 
-# Runs on input detected
+# Runs on input
 func _input(event: InputEvent) -> void:
-	# If A is pressed:
-	if event.is_action_pressed("A"):
-		# If row is greater than 0
-		if row > 0:
-			# Lower row by 1
-			row -= 1
-			# Set current row according
-			current_row_loc = rows.get_child(row).global_position
-		# If row IS less than 0
-		else:
-			# Turn left
-			turn_left()
-	# If D is pressed
-	if event.is_action_pressed("D"):
-		# If row is less than the max row
-		if row < MAX_ROW:
-			# Increase row by 1
-			row += 1
-			# Set new row
-			current_row_loc = rows.get_child(row).global_position
-		# If row IS greater than the max row
-		else:
-			# Turn right
-			turn_right()
+	if event.is_action_pressed("Click"):
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# If A is pressed, move left
+	if event.is_action_pressed("A"): move_left()
+	# Otherwise, if D is pressed, move right
+	if event.is_action_pressed("D"): move_right()
+	if event.is_action_pressed("ESC"):
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		camera_rotation.y -= event.relative.x * MOUSE_SENS
+		camera_rotation.x -= event.relative.y * MOUSE_SENS
+		camera_rotation.x = clampf(camera_rotation.x, TILT_LOWER_LIMIT, TILT_UPPER_LIMIT)
+		camera_rotation.y = clampf(camera_rotation.y, YAW_MIN_LIMIT, YAW_MAX_LIMIT)
+		camera.rotation.y = camera_rotation.y
+		camera.rotation.x = camera_rotation.x
 
-# Turn left function
-func turn_left():
-	# Match the direction
-	match facing:
-		"Forward":
-			# Set facing to left
-			facing = "Left"
-			# Set the angle
-			current_angle = PI/2.0
-		"Back":
-			# Set facing to right
-			facing = "Right"
-			# Set the angle
-			current_angle = -PI/2.0
-		"Left":
-			# Set facing to back
-			facing = "Back"
-			# Set the angle
-			current_angle = PI
-		"Right":
-			# Set facing to forward
-			facing = "Forward"
-			# Set the angle
-			current_angle = 0
-	# Set the row to the third row
-	row = 2
+# Move left method
+func move_left() -> void:
+	# If row is above the minimum
+	if row > MIN_ROW:
+		# Lower the row
+		row -= 1
+		# Update the target row
+		update_target_row()
 
-# Turn right function
-func turn_right():
-	# Match the facing direction
-	match facing:
-		"Forward":
-			# Set facing to right
-			facing = "Right"
-			# Set the angle
-			current_angle = -PI/2.0
-		"Back":
-			# Set the facing to left
-			facing = "Left"
-			# Set the current angle
-			current_angle = PI/2.0
-		"Left":
-			# Set facing to forward
-			facing = "Forward"
-			# Set current angle
-			current_angle = 0
-		"Right":
-			# Set facing to back
-			facing = "Back"
-			# Set the angle
-			current_angle = -PI
-	# Set the row to the third row
-	row = 2
+# Move right method
+func move_right() -> void:
+	# If row is less than max row
+	if row < MAX_ROW:
+		# Increase row by 1
+		row += 1
+		# Update the target row
+		update_target_row()
+
+# Function to update the target row
+func update_target_row() -> void: current_row_loc = rows.get_child(row).global_position
 
 # Runs 60 times a second
 func _physics_process(delta: float) -> void:
-	# Set the rotation to the angle given under current angle
-	global_rotation.y = lerp_angle(global_rotation.y, current_angle, TURN_SPEED * delta)
-	# If player is not on the floor, apply gravity
-	if not is_on_floor(): velocity += get_gravity() * delta
-	# If Space is pressed and player is on the floor:
-	if Input.is_action_just_pressed("Space") and is_on_floor():
-		# Set velocity for jump
-		velocity.y = JUMP_VELOCITY
-	# Set the row rotation
-	rows.global_rotation = Vector3(0, current_angle, 0)
-	# Match the facing direction
-	match facing:
-		"Forward":
-			# Move the player and rows
-			velocity.z = -SPEED
-			global_position.x = move_toward(global_position.x, current_row_loc.x, STRAFE_SPEED * delta)
-			rows.global_position.z = global_position.z
-		"Back":
-			# Move the player and rows
-			velocity.x = SPEED
-			global_position.x = move_toward(global_position.x, current_row_loc.x, STRAFE_SPEED * delta)
-			rows.global_position.z = global_position.z
-		"Left":
-			# Move the player and rows
-			velocity.x = -SPEED
-			global_position.z = move_toward(global_position.z, current_row_loc.z, STRAFE_SPEED * delta)
-			rows.global_position.x = global_position.x
-		"Right":
-			# Move the player and rows
-			velocity.x = SPEED
-			global_position.z = move_toward(global_position.z, current_row_loc.z, STRAFE_SPEED * delta)
-			rows.global_position.x = global_position.x
-	# Apply velocity
-	move_and_slide()
+	power_meter.value = power_node.current_power
+	update_row_square()
+	score_label.text = ("SCORE: " + str(score))
+	# Apply forward movement
+	body.velocity.x = 0.0
+	body.velocity.z = -power_node.current_speed
+	body.global_position.x = move_toward(body.global_position.x, current_row_loc.x, STRAFE_SPEED * delta)
+	rows.global_position.z = body.global_position.z
+	if Input.is_action_just_pressed("Space") and body.is_on_floor():
+		body.velocity.y += JUMP_VELOCITY
+	# Apply the movement
+	if not body.is_on_floor():
+		body.velocity.y -= GRAVITY * delta
+	body.move_and_slide()
+	previous_loc = global_position
+
+func connect_collectible(collectible_node: collectible):
+	collectible_node.pick_up.connect(collect_collectible)
+
+func collect_collectible(collectible_name: String):
+	match collectible_name:
+		"Crystal":
+			score += 1
+
+func get_power_node():
+	for child in get_tree().current_scene.get_children():
+		if child.name == "Power":
+			power_node = child
+
+func update_row_square():
+	for child in row_squares.get_children():
+		if child.name == ("Row" + str(row + 1)):
+			child.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		else:
+			child.modulate = Color(0.0, 0.0, 0.0, 1.0)
+
+func connect_signals():
+	power_node.invincibility_changed.connect(_on_power_invincibility_changed)
+	power_node.game_over_triggered.connect(lose)
+
+func _on_power_invincibility_changed(is_invincible: bool) -> void:
+	if is_invincible:
+		invincible_indicator.modulate = Color(0.843, 0.733, 0.0, 0.573)
+	else:
+		invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.741)
+
+func lose():
+	print("YOU LOST")
