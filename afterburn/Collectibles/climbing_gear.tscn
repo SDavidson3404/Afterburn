@@ -1,13 +1,27 @@
 [gd_scene format=3 uid="uid://d3sacg7flphdl"]
 
-[ext_resource type="Script" uid="uid://b4bru884vuspc" path="res://Collectibles/climbing_gear.gd" id="1_upg6w"]
 [ext_resource type="PackedScene" uid="uid://s7vdp82ujmq7" path="res://Collectibles/collectible_template.tscn" id="2_trt6a"]
+
+[sub_resource type="GDScript" id="GDScript_gjw5i"]
+script/source = "extends collectible
+
+func _on_body_entered(body: Node3D) -> void:
+	if body.is_in_group(\"Player\"):
+		pick_up_effect()
+
+func pick_up_effect():
+	super()
+	for child in get_tree().get_first_node_in_group(\"Player\").get_children():
+		if child is Player:
+			child.can_climb = true
+	queue_free()
+"
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_jp6wc"]
 height = 1.0
 
 [node name="ClimbingGear" type="Node3D" unique_id=2024489451]
-script = ExtResource("1_upg6w")
+script = SubResource("GDScript_gjw5i")
 
 [node name="CollectibleTemplate" parent="." unique_id=1412815026 instance=ExtResource("2_trt6a")]
 

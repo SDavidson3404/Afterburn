@@ -8,6 +8,7 @@ signal entered(node_to_keep: street)
 @onready var area: Area3D = $Area3D
 @export var starting_street_node: bool = false
 var collectibles: Array = []
+@onready var rows: Node3D = $Rows
 
 func _ready() -> void:
 	if starting_street_node:
@@ -25,6 +26,10 @@ func _on_area_3d_body_entered(body: Node3D) -> void:
 	if body.is_in_group("Player") and not has_been_entered:
 		has_been_entered = true
 		entered.emit(self)
+
+func get_rows():
+	return rows.get_children()
+
 
 func set_enter_potential(value: bool):
 	if not is_inside_tree():
