@@ -111,4 +111,6 @@ func summon_in_road(road):
 				# Set the location of the item
 				item_spawn.global_position.x = row.global_position.x
 				item_spawn.global_position.z = (row.global_position.z - (num * 30))
+				
+				# Connect the signal of the obstacle
 				connect_obstacle(item_spawn)
