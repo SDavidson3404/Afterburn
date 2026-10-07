@@ -63,15 +63,12 @@ func _ready() -> void:
 	print("Lifetime Stats: ", DatabaseManager.lifetime_stats())
 	print("====================================\n")
 	
-	
-	
-	
-	
-	
-	
 	# Execute Power Manager test suite
 	run_power_tests()
-
+	
+	# Execute Crystal Spawner test suite
+	run_crystal_spawn_tests()
+	
 ## Comprehensive test suite for power.gd physics, invincibility, catch-up math, and signals
 func run_power_tests() -> void:
 	print("====================================")
@@ -183,3 +180,98 @@ func run_power_tests() -> void:
 	
 	# Clean up test node
 	power.queue_free()
+	
+	## Comprehensive test suite for crystal_spawn.gd spawner logic, curves, and lifecycle
+func run_crystal_spawn_tests() -> void:
+	print("====================================")
+	print("--- FULL CRYSTAL SPAWN TEST ---")
+	print("====================================\n")
+	
+	# 1. Setup Test Hierarchy
+	var test_root := Node3D.new()
+	add_child(test_root)
+	
+	var player_node := Node3D.new()
+	test_root.add_child(player_node)
+	player_node.global_position = Vector3.ZERO
+	
+	var power_node: Node = preload("res://power.gd").new()
+	test_root.add_child(power_node)
+	
+	# Create a dummy PackedScene for crystal spawning
+	var dummy_crystal := Node3D.new()
+	var dummy_scene := PackedScene.new()
+	dummy_scene.pack(dummy_crystal)
+	dummy_crystal.free()
+	
+	# Instantiate Crystal Spawner
+	var spawner_script = preload("res://crystal_spawn.gd")
+	var spawner = Node3D.new()
+	spawner.set_script(spawner_script)
+	spawner.player = player_node
+	spawner.power = power_node
+	spawner.crystal_scene = dummy_scene
+	test_root.add_child(spawner)
+	
+	power_node.start_run()
+	
+	# --- TEST 1: SPEED & REACTION TIME CURVE HELPER MATH ---
+	print("--- 1. SPEED & REACTION TIME CURVES ---")
+	var clamped_base_speed: float = spawner._get_clamped_speed()
+	var base_reaction: float = spawner._get_reaction_time(clamped_base_speed)
+	print("Base Speed (15 m/s) Clamped: ", clamped_base_speed, " (Expected: 15.0)")
+	print("Base Reaction Time: ", base_reaction, "s (Expected: 3.0)")
+	
+	var mach1_reaction: float = spawner._get_reaction_time(spawner.max_speed)
+	print("Mach 1 (343 m/s) Reaction Time: ", mach1_reaction, "s (Expected: 1.0)")
+	print("------------------------------------\n")
+	
+	# --- TEST 2: INITIAL SPAWN TIMER CALCULATIONS ---
+	print("--- 2. INITIAL SPAWN TIMER & COUNTDOWN ---")
+	print("Is Waiting to Spawn: ", spawner._is_waiting_to_spawn, " (Expected: true)")
+	print("Spawn Timer Armed (> 0s): ", spawner._spawn_timer > 0.0)
+	
+	# Fast-forward process to force spawn crystal
+	var time_to_wait: float = spawner._spawn_timer + 0.1
+	spawner._process(time_to_wait)
+	
+	var active_crystal: Node3D = spawner._active_crystal
+	print("Active Crystal Spawned: ", is_instance_valid(active_crystal), " (Expected: true)")
+	if is_instance_valid(active_crystal):
+		print("Spawned Distance Ahead of Player: ", -active_crystal.global_position.z, " meters")
+	print("------------------------------------\n")
+	
+	# --- TEST 3: CRYSTAL COLLECTION EVENT ---
+	print("--- 3. CRYSTAL COLLECTION ---")
+	spawner.on_crystal_collected()
+	print("Active Crystal Freed on Collection: ", not is_instance_valid(spawner._active_crystal), " (Expected: true)")
+	print("Is Waiting to Spawn Next Crystal: ", spawner._is_waiting_to_spawn, " (Expected: true)")
+	print("------------------------------------\n")
+	
+	# --- TEST 4: CRYSTAL MISSED EVENT ---
+	print("--- 4. CRYSTAL MISSED EVENT ---")
+	# Force spawn a crystal
+	spawner._process(spawner._spawn_timer + 0.1)
+	var second_crystal: Node3D = spawner._active_crystal
+	print("Second Crystal Spawned: ", is_instance_valid(second_crystal), " (Expected: true)")
+	
+	# Move crystal behind player (> 5 meters) to simulate passing
+	if is_instance_valid(second_crystal):
+		second_crystal.global_position = player_node.global_position + Vector3(0, 0, 6.0)
+		spawner._process(0.1) # Triggers on_crystal_missed inside _process
+		
+	print("Active Crystal Freed After Passing Player: ", not is_instance_valid(spawner._active_crystal), " (Expected: true)")
+	print("Is Waiting for Next Spawn: ", spawner._is_waiting_to_spawn, " (Expected: true)")
+	print("------------------------------------\n")
+	
+	# --- TEST 5: INVINCIBILITY DELAY OFFSET ---
+	print("--- 5. INVINCIBILITY SPAWN DELAY OFFSET ---")
+	power_node.is_invincible = true
+	power_node.invincibility_timer = 3.0
+	
+	spawner._calculate_and_start_spawn_timer()
+	print("Spawn Timer Includes Invincibility (>= 3.0s): ", spawner._spawn_timer >= 3.0)
+	print("====================================\n")
+	
+	# Clean up test hierarchy
+	test_root.queue_free()

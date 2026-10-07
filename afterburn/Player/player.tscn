@@ -8,6 +8,10 @@
 
 [sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
 
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_jp6wc"]
+radius = 9.545
+height = 19.09
+
 [node name="Player" type="Node3D" unique_id=196411886 groups=["Player"]]
 script = ExtResource("1_l8h54")
 
@@ -36,7 +40,7 @@ shape = SubResource("CapsuleShape3D_r8tgl")
 mesh = SubResource("CapsuleMesh_r8tgl")
 
 [node name="Camera3D" type="Camera3D" parent="Body" unique_id=1996423927]
-transform = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, 0, 1, 0)
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.25881907, 0, -0.25881907, 0.9659258, 0, 3, 5)
 
 [node name="UI" type="Node2D" parent="Body" unique_id=48081940]
 
@@ -46,8 +50,24 @@ offset_top = 17.0
 offset_right = 85.0
 offset_bottom = 40.0
 theme_override_font_sizes/font_size = 30
-text = "SCORE: X"
+text = "DISTANCE: X"
 metadata/_edit_use_anchors_ = true
+
+[node name="SpeedLabel" type="Label" parent="Body/UI" unique_id=863442090]
+offset_left = 15.0
+offset_top = 59.0
+offset_right = 229.0
+offset_bottom = 101.0
+theme_override_font_sizes/font_size = 30
+text = "SPEED (MPS): X"
+metadata/_edit_use_anchors_ = true
+
+[node name="Power Meter" type="ProgressBar" parent="Body/UI" unique_id=267632114]
+offset_left = 391.0
+offset_top = 59.0
+offset_right = 712.0
+offset_bottom = 86.0
+show_percentage = false
 
 [node name="Row_Squares" type="Node2D" parent="Body/UI" unique_id=893208432]
 
@@ -80,3 +100,8 @@ modulate = Color(0, 0, 0, 1)
 position = Vector2(655, 32)
 scale = Vector2(40.5, 41.5)
 mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="Invincible indicator" type="MeshInstance2D" parent="Body/UI" unique_id=42956622]
+position = Vector2(1059, 86)
+scale = Vector2(5.1177316, 4.9190683)
+mesh = SubResource("CapsuleMesh_jp6wc")
