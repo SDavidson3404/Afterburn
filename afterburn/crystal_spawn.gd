@@ -72,9 +72,9 @@ func spawn_crystal() -> void:
 	var x_offset: float = lane_offset_index * lane_width
 
 	# Position crystal ahead of the player into a random lane
-	var spawn_pos: Vector3 = player.global_position
-	spawn_pos += -player.global_transform.basis.z * spawn_distance
-	spawn_pos += player.global_transform.basis.x * x_offset
+	var spawn_pos: Vector3 = player.body.global_position
+	spawn_pos += -player.body.global_transform.basis.z * spawn_distance
+	spawn_pos.x = x_offset
 
 	crystal.global_position = spawn_pos
 
@@ -100,7 +100,6 @@ func on_crystal_missed() -> void:
 ## Removes the active crystal from memory
 func _clear_active_crystal() -> void:
 	if is_instance_valid(_active_crystal):
-		_active_crystal.queue_free()
 		_active_crystal = null
 
 ## Calculates next crystal spawn arrival delay using target speed to maintain core difficulty.
