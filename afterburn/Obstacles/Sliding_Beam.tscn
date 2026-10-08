@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://sw4x7xiwxjtq"]
+
+[ext_resource type="Script" uid="uid://dqg6mc2gc5tsw" path="res://Obstacles/Obstacle.gd" id="1_r3igq"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
+size = Vector3(3, 1, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
+size = Vector3(3, 1, 3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fnnny"]
+size = Vector3(3, 4, 0.6347656)
+
+[sub_resource type="BoxMesh" id="BoxMesh_r8tgl"]
+size = Vector3(3, 4, 0.6290283)
+
+[node name="Testing Beam" type="Area3D" unique_id=553523956]
+script = ExtResource("1_r3igq")
+dodge_capabilities = "Slide"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1760226055]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("BoxShape3D_jp6wc")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=655153980]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="." unique_id=150103972]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 1.1750157, 0.032791138, -0.0076014483)
+shape = SubResource("BoxShape3D_fnnny")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1433633354]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 1.1778843, 0.36614776, -0.007601448)
+mesh = SubResource("BoxMesh_r8tgl")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="." unique_id=852480883]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.1778843, 0.5, -0.0076015512)
+shape = SubResource("BoxShape3D_fnnny")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=914876666]
+transform = Transform3D(-0.00033225614, -0.0034997265, -0.9999938, -0.0006427576, 0.9999937, -0.0034995128, 0.99999976, 0.0006415923, -0.0003345008, -1.1750157, 0.5, -0.007601551)
+mesh = SubResource("BoxMesh_r8tgl")

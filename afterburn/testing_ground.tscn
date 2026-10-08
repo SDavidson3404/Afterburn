@@ -7,11 +7,14 @@
 [ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
 [ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
 
-[node name="Testing Ground" type="Node3D" unique_id=1583271204]
+[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("crystal_spawner")]
 script = ExtResource("1_nxusl")
+crystal_spawner = NodePath("CrystalSpawner")
 
-[node name="Player" parent="." unique_id=196411886 instance=ExtResource("1_q4otm")]
+[node name="Player" parent="." unique_id=196411886 node_paths=PackedStringArray("power_node", "Wall_Detection") instance=ExtResource("1_q4otm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
+power_node = NodePath("../Power")
+Wall_Detection = NodePath("..")
 
 [node name="Roads" type="Node3D" parent="." unique_id=564614269]
 

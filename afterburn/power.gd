@@ -10,6 +10,8 @@ signal game_over_triggered
 @export_category("Run Configuration")
 @export var max_power: float = 100.0 # Max fuel capacity
 @export var power_drain_rate: float = 5.0 # Power lost per second
+@export var slide_cost: int = 10
+@export var dash_cost: int = 25
 @export var base_speed: float = 15.0 # Starting movement speed in m/s
 @export var speed_acceleration: float = 0.25 # Adds 15 m/s every 60 seconds
 @export var coasting_deceleration: float = 5.0 # Speed lost per second while coasting
@@ -37,6 +39,8 @@ func start_run() -> void:
 	is_invincible = false
 	invincibility_timer = 0.0
 	power_changed.emit(current_power, max_power)
+	player.sliding.connect(slide)
+	player.dashing.connect(dash)
 
 ## Performs acceleration, deceleration, and power drain calculations
 func _process(delta: float) -> void:
@@ -69,7 +73,7 @@ func _process(delta: float) -> void:
 	if is_coasting:
 		# 4. Coasting State: Decelerate continuously to 0 m/s
 		current_speed = maxf(0.0, current_speed - (coasting_deceleration * delta))
-		if current_speed <= 0.0:
+		if current_speed <= 0.0 and player.current_speed <= 0.0:
 			end_run()
 			
 	else:
@@ -97,7 +101,6 @@ func _process(delta: float) -> void:
 				is_invincible = false
 				invincibility_timer = 0.0
 				invincibility_changed.emit(false)
-	player.current_speed = current_speed
 
 ## Restores power to full and triggers invincibility if player is recovering speed
 func collect_crystal() -> void:
@@ -141,3 +144,9 @@ func end_run() -> void:
 	is_invincible = false
 	current_speed = 0.0
 	game_over_triggered.emit()
+
+func slide():
+	current_power = clamp(current_power - slide_cost, 0.0, max_power)
+
+func dash():
+	current_power = clamp(current_power - dash_cost, 0.0, max_power)

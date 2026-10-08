@@ -8,7 +8,7 @@ signal entered(node_to_keep: street) # The signal that the player entered the ro
 @export var starting_street_node: bool = false # A check for if this is the starting street
 
 # Nodes
-@onready var links: Node3D = $Links # The parent node of the links
+@onready var end_link: Node3D = $EndLink
 @onready var area: Area3D = $Area3D # The area that detects if you entered the road
 @onready var rows: Node3D = $Rows # The parent node of the rows
 
@@ -23,16 +23,6 @@ func _ready() -> void:
 	# if this road is the starting road, set the monitoring to true
 	if starting_street_node:
 		area.monitoring = true
-
-## Returns the global transform (Scale, Position, and Rotation) of a given link
-func find_link_loc(Link: Node3D):
-	
-	# For loop for the children of the link parent node
-	for child in links.get_children():
-		
-		# If the child is the link that was given then return the transform
-		if child == Link:
-			return child.global_transform
 
 ## Gets the link nodes under the link parent node
 func get_links(link: Node3D): return link.get_children()
@@ -50,12 +40,7 @@ func _on_area_3d_body_entered(body: Node3D) -> void:
 ## Gets the row nodes under the row parent node
 func get_rows(): return rows.get_children()
 
-## Sets the potential to enter the road, toggling it to either you can or cannot.
-func set_enter_potential(value: bool):
-	
-	# If the scenetree doesn't exist, end the method
-	if not is_inside_tree():
-		return
-	
-	# Change the monitoring on the area3D to the argument given when this method is called
-	area.set_deferred("monitoring", value)
+func get_specific_row(row_num: int):
+	for child in rows.get_children():
+		if child.name == "Row" + str(row_num):
+			return child
