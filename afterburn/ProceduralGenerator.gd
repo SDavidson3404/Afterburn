@@ -41,10 +41,9 @@ func _ready() -> void:
 ## Spawns the roads and buildings on the links.
 ## Function runs to enter road
 func enter(street_node: street):
-	var current_spawn
 	# Loop for each link on a road
 	for child in street_node.get_links(street_node.links):
-		
+		var current_spawn
 		# Gets and instances a building node
 		# Runs only if "Right" or "Left" is in the name of the link
 		if "Right" in child.name or "Left" in child.name:
@@ -64,18 +63,20 @@ func enter(street_node: street):
 					road_3 = current_spawn
 		
 		# Set global transform for the spawned node
-		current_spawn.global_transform = child.global_transform
+		if is_instance_valid(current_spawn):
+			current_spawn.global_transform = child.global_transform
 		
 	# If starting street still exists, summon obstacles
 	if is_instance_valid(starting_street):
-		summon_in_road(street_node)
+		if not starting_street.has_summoned_obstacles:
+			summon_in_road(street_node)
 	
 	# If current road count is 2 or less and road 2 exists,
 	# Summon walls and next road for the second road
-	if current_road_count < 3 and road_2:
+	if current_road_count < 3 and road_2 and not road_2.has_summoned_obstacles:
 		current_road_count += 1
-		enter(road_2)
 		summon_in_road(road_2)
+		enter(road_2)
 
 ## Used to connect the obstacle's signal to the method
 func connect_obstacle(obstacle):
@@ -120,8 +121,8 @@ func disable(not_disable: street):
 
 ## Summon obstacles and collectibles. 
 ## Run to summon stuff in the road
-func summon_in_road(road):
-	
+func summon_in_road(road: street):
+	road.has_summoned_obstacles = true
 	# Run 12 times from 0 to 11
 	for num in 11:
 		var wall_spawns: Array = []
@@ -133,7 +134,7 @@ func summon_in_road(road):
 			var chance = randi_range(1, 20)
 			
 			# If the random number is less than or equal to 10, pick a random obstacle to spawn
-			if num > 0 and chance <= 20:
+			if num > 0 and chance <= 10:
 				item_to_spawn = obstacles_to_spawn.pick_random()
 				
 				# Spawn the item
@@ -151,7 +152,6 @@ func summon_in_road(road):
 				connect_obstacle(item_spawn)
 		if wall_spawns.size() >= 5:
 			var to_free = wall_spawns.pick_random()
-			print(to_free)
 			to_free.queue_free()
 
 ## Summons a road and returns said road to later be put in its place

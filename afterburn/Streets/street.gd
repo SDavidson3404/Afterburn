@@ -15,6 +15,7 @@ signal entered(node_to_keep: street) # The signal that the player entered the ro
 # Vars
 var collectibles: Array = [] # The array of collectibles
 var has_been_entered: bool = false # A check for if the road has been entered
+var has_summoned_obstacles: bool = false
 
 ## Runs upon instancing the scene in a scenetree.
 func _ready() -> void:
