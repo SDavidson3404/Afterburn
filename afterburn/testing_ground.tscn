@@ -7,9 +7,13 @@
 [ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
 [ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
 
-[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("crystal_spawner")]
+[sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
+size = Vector3(21, 15, 1)
+
+[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("crystal_spawner", "player")]
 script = ExtResource("1_nxusl")
 crystal_spawner = NodePath("CrystalSpawner")
+player = NodePath("Player")
 
 [node name="Player" parent="." unique_id=196411886 node_paths=PackedStringArray("power_node", "Wall_Detection") instance=ExtResource("1_q4otm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
@@ -27,8 +31,18 @@ starting_street_node = true
 script = ExtResource("4_nxusl")
 player = NodePath("../Player")
 
+[node name="Row_Detector" type="Area3D" parent="." unique_id=587142436]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Row_Detector" unique_id=1184232590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+shape = SubResource("BoxShape3D_jp6wc")
+
 [node name="CrystalSpawner" type="Node3D" parent="." unique_id=1351622964 node_paths=PackedStringArray("player", "power")]
 script = ExtResource("5_ytm02")
 crystal_scene = ExtResource("6_1phy5")
 player = NodePath("../Player")
 power = NodePath("../Power")
+
+[node name="Obstacles" type="Node3D" parent="." unique_id=1141337569]
+
+[connection signal="body_entered" from="Row_Detector" to="." method="_on_row_detector_body_entered"]
