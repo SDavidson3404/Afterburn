@@ -138,7 +138,8 @@ func _physics_process(delta: float) -> void:
 		
 		# If you are sliding, cancel it
 		if is_sliding:
-			animation_player.stop()
+			if animation_player.current_animation == "Slide":
+				animation_player.stop()
 			is_sliding = false
 		
 		# Apply jump velocity
@@ -201,4 +202,6 @@ func slide():
 	is_sliding = false
 
 ## Runs the hit wall animation upon being called
-func hit(): animation_player.play("Hit_Wall")
+func hit(): 
+	animation_player.stop()
+	animation_player.play("Hit_Wall")
