@@ -38,6 +38,7 @@ func _process(delta: float) -> void:
 		# Get Z position relative to the player's forward orientation (-Z is forward)
 		var relative_z: float = player.body.to_local(_active_crystal.global_position).z
 		if relative_z > 5.0: # 5 meters past the player
+			print("YOU MISSED")
 			on_crystal_missed()
 		return # Do not count down spawn timer while a crystal exists on track
 
@@ -74,7 +75,8 @@ func spawn_crystal() -> void:
 	# Position crystal ahead of the player into a random lane
 	var spawn_pos: Vector3 = player.body.global_position
 	spawn_pos += -player.body.global_transform.basis.z * spawn_distance
-	spawn_pos += player.body.global_transform.basis.x * x_offset
+	spawn_pos.x = x_offset
+	spawn_pos.y = randf_range(1.5, 2.5)
 
 	crystal.global_position = spawn_pos
 
