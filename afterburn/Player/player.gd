@@ -1,7 +1,6 @@
 extends Node3D
 class_name Player
 
-@onready var timer = $Timer
 @onready var camera: Camera3D = $Body/Camera3D
 @onready var rows: Node3D = $Rows
 @onready var score_label: Label = $Body/UI/ScoreLabel
@@ -171,9 +170,5 @@ func _on_power_invincibility_changed(is_invincible: bool) -> void:
 	else: invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
 
 ## Runs on losing the game
-func lose(): 
-	print("YOU LOST")
-	timer.start()
-
-func _on_timer_timeout() -> void:
-	get_tree().reload_current_scene()
+## As of right now only prints a message that you lost
+func lose(): print("YOU LOST")
