@@ -13,6 +13,7 @@ signal dashing # A signal for when dashing
 @onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
 @onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animationplayer
+@onready var timer: Timer = $Timer
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
 
@@ -185,7 +186,10 @@ func _on_power_invincibility_changed(is_invincible: bool) -> void:
 
 ## Runs on losing the game
 ## As of right now only prints a message that the player lost
-func lose(): print("YOU LOST")
+func lose():
+	print("YOU LOST")
+	# Just an option, you could instead of creating a timer node, do "await get_tree().create_timer(3).timeout" then the next thing in the line after
+	timer.start()
 
 ## Begins the sliding state
 func slide():
@@ -205,3 +209,6 @@ func slide():
 func hit(): 
 	animation_player.stop()
 	animation_player.play("Hit_Wall")
+
+func _on_timer_timeout() -> void:
+	get_tree().reload_current_scene()

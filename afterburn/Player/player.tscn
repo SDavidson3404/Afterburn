@@ -230,3 +230,9 @@ mesh = SubResource("CapsuleMesh_jp6wc")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Body" unique_id=1048757398]
 libraries/ = SubResource("AnimationLibrary_btcbx")
+
+[node name="Timer" type="Timer" parent="." unique_id=241735877]
+wait_time = 3.0
+one_shot = true
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

@@ -10,12 +10,12 @@ signal game_over_triggered
 @export_category("Run Configuration")
 @export var max_power: float = 100.0 # Max fuel capacity
 @export var power_drain_rate: float = 5.0 # Power lost per second
-@export var slide_cost: int = 10
-@export var dash_cost: int = 25
 @export var base_speed: float = 15.0 # Starting movement speed in m/s
 @export var speed_acceleration: float = 0.25 # Adds 15 m/s every 60 seconds
 @export var coasting_deceleration: float = 5.0 # Speed lost per second while coasting
 @export var crystal_invincibility_duration: float = 3.0 # Duration of invincibility/catch-up acceleration
+@export var slide_cost: int = 10
+@export var dash_cost: int = 25
 @export var player: Player
 
 # Live tracking variables
@@ -63,7 +63,6 @@ func _process(delta: float) -> void:
 	
 	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.add_distance(meters_moved)
-		player.score = DatabaseManager.display_score()
 	
 	# 3. Increase target speed steadily based on total distance traveled
 	# Standard physics motion equation (v = sqrt(v0^2 + 2ad))
@@ -109,16 +108,9 @@ func collect_crystal() -> void:
 	
 	current_power = max_power
 	is_coasting = false
-	
-	# Invinsibility acts as recovery grace period, but is skipped if already at target speed
-	if current_speed < target_speed:
-		is_invincible = true
-		invincibility_timer = crystal_invincibility_duration
-		invincibility_changed.emit(true)
-	else:
-		is_invincible = false
-		invincibility_timer = 0.0
-		
+	is_invincible = true
+	invincibility_timer = crystal_invincibility_duration
+	invincibility_changed.emit(true)
 	power_changed.emit(current_power, max_power)
 
 ## Handles logic for the player hitting an obstacle
