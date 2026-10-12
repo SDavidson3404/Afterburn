@@ -13,6 +13,10 @@ script = ExtResource("1_nxusl")
 [node name="Player" parent="." unique_id=196411886 instance=ExtResource("1_q4otm")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
 
+[node name="Timer" type="Timer" parent="Player" unique_id=2033127692]
+wait_time = 3.0
+one_shot = true
+
 [node name="Roads" type="Node3D" parent="." unique_id=564614269]
 
 [node name="StreetTemplate" parent="Roads" unique_id=82585562 instance=ExtResource("3_nxusl")]
@@ -30,3 +34,5 @@ script = ExtResource("5_ytm02")
 crystal_scene = ExtResource("6_1phy5")
 player = NodePath("../Player")
 power = NodePath("../Power")
+
+[connection signal="timeout" from="Player/Timer" to="Player" method="_on_timer_timeout"]
