@@ -36,8 +36,9 @@ func _process(delta: float) -> void:
 	# 1. Track active crystal passing behind the player (Missed crystal)
 	if is_instance_valid(_active_crystal):
 		# Get Z position relative to the player's forward orientation (-Z is forward)
-		var relative_z: float = player.to_local(_active_crystal.global_position).z
+		var relative_z: float = player.body.to_local(_active_crystal.global_position).z
 		if relative_z > 5.0: # 5 meters past the player
+			print("YOU MISSED")
 			on_crystal_missed()
 		return # Do not count down spawn timer while a crystal exists on track
 
@@ -75,6 +76,7 @@ func spawn_crystal() -> void:
 	var spawn_pos: Vector3 = player.body.global_position
 	spawn_pos += -player.body.global_transform.basis.z * spawn_distance
 	spawn_pos.x = x_offset
+	spawn_pos.y = randf_range(1.5, 2.5)
 
 	crystal.global_position = spawn_pos
 
@@ -100,6 +102,7 @@ func on_crystal_missed() -> void:
 ## Removes the active crystal from memory
 func _clear_active_crystal() -> void:
 	if is_instance_valid(_active_crystal):
+		_active_crystal.queue_free()
 		_active_crystal = null
 
 ## Calculates next crystal spawn arrival delay using target speed to maintain core difficulty.

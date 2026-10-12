@@ -16,5 +16,3 @@ func pick_up_effect() -> void:
 	# Notify spawner to trigger power refill, invincibility, and schedule next spawn
 	if spawner and spawner.has_method("on_crystal_collected"):
 		spawner.on_crystal_collected()
-		
-	queue_free()
