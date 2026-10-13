@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
 [ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
 [ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
+[ext_resource type="Script" uid="uid://db18b5x41fbqr" path="res://game_over_screen.gd" id="7_alr7o"]
 
 [node name="Testing Ground" type="Node3D" unique_id=1583271204]
 script = ExtResource("1_nxusl")
@@ -14,8 +15,37 @@ script = ExtResource("1_nxusl")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
 
 [node name="Timer" type="Timer" parent="Player" unique_id=2033127692]
-wait_time = 3.0
-one_shot = true
+wait_time = 0.8
+
+[node name="GameOverScreen" type="CanvasLayer" parent="Player/Timer" unique_id=136186902]
+script = ExtResource("7_alr7o")
+
+[node name="Control" type="Control" parent="Player/Timer/GameOverScreen" unique_id=2052275812]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Game Over" type="Label" parent="Player/Timer/GameOverScreen/Control" unique_id=2010940768]
+layout_mode = 0
+offset_left = 253.0
+offset_top = 146.0
+offset_right = 923.0
+offset_bottom = 447.0
+theme_override_font_sizes/font_size = 56
+text = "Game Over"
+horizontal_alignment = 1
+
+[node name="Countdown" type="Label" parent="Player/Timer/GameOverScreen/Control" unique_id=401745297]
+layout_mode = 0
+offset_left = 474.0
+offset_top = 288.0
+offset_right = 702.0
+offset_bottom = 337.0
+theme_override_font_sizes/font_size = 27
+text = "Respawning in x"
 
 [node name="Roads" type="Node3D" parent="." unique_id=564614269]
 

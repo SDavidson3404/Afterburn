@@ -1,6 +1,7 @@
 extends Node3D
 class_name Player
 
+@onready var countdown_label: Label = $GameOverScreen/Control/Countdown
 @onready var timer = $Timer
 @onready var camera: Camera3D = $Body/Camera3D
 @onready var rows: Node3D = $Rows
@@ -170,10 +171,20 @@ func _on_power_invincibility_changed(is_invincible: bool) -> void:
 	# Otherwise, make it translucent black
 	else: invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
 
+## Time untill respawn
+var time_left: int = 3
+
 ## Runs on losing the game
 func lose(): 
 	print("YOU LOST")
+	$Timer/GameOverScreen.show()
+	$Timer/GameOverScreen/Control/Countdown.text = str("Respawning in " + str(time_left))
 	timer.start()
 
+## Runs after the respawn timer ends
 func _on_timer_timeout() -> void:
-	get_tree().reload_current_scene()
+	time_left -= 1
+	$Timer/GameOverScreen/Control/Countdown.text = str("Respawning in " + str(time_left))
+	
+	if time_left <= 0:
+		get_tree().reload_current_scene()
