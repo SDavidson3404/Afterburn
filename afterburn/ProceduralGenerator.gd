@@ -80,6 +80,10 @@ func _ready() -> void:
 	place_Area3D(current_rows.front().global_position.z)
 
 
+func _process(_delta: float) -> void:
+	if row_count < 15:
+		summon_row_obstacles()
+
 ## Spawns the roads and buildings on the links.
 ## Function runs to enter road
 func enter(street_node: street):
@@ -122,7 +126,7 @@ func enter(street_node: street):
 			road_3 = current_road_spawn
 	
 	# If current road count is 2 and road_2 exists
-	if current_road_count < 3 and road_2:
+	if is_instance_valid(starting_street) and current_road_count < 3:
 		
 		# Run this method for the new road
 		enter(road_2)
@@ -147,11 +151,9 @@ func disable(not_disable: street):
 	
 	# For loop for the children of the roads parent node
 	for child in roads.get_children():
-		
 		# If child is not the entered road or the third road,
 		# Get the children of the child node and remove them
 		if child != not_disable and child != road_3:
-			
 			# Remove the child node
 			child.queue_free()
 	
@@ -169,7 +171,6 @@ func disable(not_disable: street):
 
 ## Summons a row of obstacles
 func summon_row_obstacles():
-	
 	# Create necessary variables
 	var taken_rows: Array = []
 	var wall_spawns: Array = []
@@ -215,25 +216,14 @@ func summon_row_obstacles():
 				if loop_count <= 10:
 					loop_count += 1
 					main_row = obstacle_instance.possible_main_rows.pick_random()
+				else:
+					return
 			
 			# Save the current row being messed with starting with the main row
 			var current_row: int = main_row
 			
 			# Append the row to the taken rows array
 			taken_rows.append(current_row)
-			
-			# For the amount of times in the row count of the obstacle
-			for row_num in obstacle_instance.Row_Count - 1:
-				
-				# If the obstacle stretches right, increase the current row and append it to the taken rows
-				if obstacle_instance.direction_stretched == "Right":
-					current_row += 1
-					taken_rows.append(current_row)
-				
-				# If the obstacle stretches left, decrease the current row and append it to the taken rows
-				elif obstacle_instance.direction_stretched == "Left":
-					current_row -= 1
-					taken_rows.append(current_row)
 			
 			# If the first row is not set up, find the z offset based on the player's position
 			if not set_up:
@@ -244,6 +234,7 @@ func summon_row_obstacles():
 				row_z_offset = place_obstacle(num, current_rows.back())
 			
 			# Place the obstacle in its row
+			
 			obstacle_instance.global_position.x = row_z_offset.x
 			
 			# Detect the number of walls and put it into the wall count variable
@@ -265,14 +256,12 @@ func summon_row_obstacles():
 
 ## Detects if the given obstacle is a wall
 func detect_walls(obstacle: Obstacle):
-	
 	# If you cannot dodge the obstacle, return true
 	if obstacle.dodge_capabilities == "False":
 		return true
 
 ## Gets the position based on the basis point and the row index
 func place_obstacle(row_index: int, basis_z):
-	
 	# Get the optimal distance
 	var dist = find_optimal_distance()
 	
@@ -285,7 +274,6 @@ func place_obstacle(row_index: int, basis_z):
 
 ## Finds the optimal distance for an obstacle
 func find_optimal_distance():
-	
 	# Get the player's speed
 	var clamped_speed = crystal_spawner._get_clamped_speed()
 	
@@ -325,10 +313,8 @@ func summon_side(road: street):
 
 ## Runs what happens when running into the area3D to detect when the player passes a row
 func _on_row_detector_body_entered(body: Node3D) -> void:
-	
 	# If the body is in the player group
 	if body.is_in_group("Player"):
-		
 		# If the row to free exists, delete it
 		if is_instance_valid(row_to_free):
 			row_to_free.queue_free()
@@ -338,6 +324,7 @@ func _on_row_detector_body_entered(body: Node3D) -> void:
 		
 		# Remove the passed row from current rows
 		current_rows.erase(current_rows.front())
+		
 		
 		# Summon a new row of obstacles
 		summon_row_obstacles()

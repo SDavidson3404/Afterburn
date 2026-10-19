@@ -123,6 +123,9 @@ func obstacle_hit(damage: float = 25.0) -> void:
 		end_run()
 		return
 	
+	is_invincible = true
+	invincibility_timer = 1.5
+	invincibility_changed.emit(true)
 	current_power = maxf(0.0, current_power - damage)
 	power_changed.emit(current_power, max_power)
 	

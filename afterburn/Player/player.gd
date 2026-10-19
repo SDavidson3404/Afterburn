@@ -34,6 +34,7 @@ var score: int = 0 # The current score
 var is_sliding: bool = false # A bool to show if you are currently sliding
 var is_dashing: bool = false # A bool to show if you are starting dashing
 var starting_run: bool = true # A bool to show if the run is starting
+var hit_wall: bool = false
 
 ## Runs when the scene is instanced or loaded in
 func _ready() -> void:
@@ -72,7 +73,6 @@ func _input(event: InputEvent) -> void:
 	
 	# If ESC is pressed, set mouse to visible
 	if event.is_action_pressed("ESC"): Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 
 ## Moves the active row to the left one
 func move_left() -> void:
