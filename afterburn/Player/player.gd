@@ -178,13 +178,16 @@ var time_left: int = 3
 func lose(): 
 	print("YOU LOST")
 	$Timer/GameOverScreen.show()
-	$Timer/GameOverScreen/Control/Countdown.text = str("Respawning in " + str(time_left))
-	timer.start()
+	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
 
 ## Runs after the respawn timer ends
 func _on_timer_timeout() -> void:
 	time_left -= 1
-	$Timer/GameOverScreen/Control/Countdown.text = str("Respawning in " + str(time_left))
+	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
 	
 	if time_left <= 0:
 		get_tree().reload_current_scene()
+
+func _on_button_pressed() -> void:
+	$Timer/GameOverScreen/Control/Button/Countdown.show()
+	timer.start()

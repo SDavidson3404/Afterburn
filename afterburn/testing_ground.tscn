@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bptf2xmr8avlg" path="res://ProceduralGenerator.gd" id="1_nxusl"]
 [ext_resource type="PackedScene" uid="uid://bohcd45ewcaui" path="res://Player/player.tscn" id="1_q4otm"]
 [ext_resource type="PackedScene" uid="uid://bfyf2n3db7drf" path="res://Streets/street_template.tscn" id="3_nxusl"]
+[ext_resource type="Script" uid="uid://8cvimaq8qkvh" path="res://countdown.gd" id="4_frp2q"]
 [ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
 [ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
 [ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
@@ -38,14 +39,44 @@ theme_override_font_sizes/font_size = 56
 text = "Game Over"
 horizontal_alignment = 1
 
-[node name="Countdown" type="Label" parent="Player/Timer/GameOverScreen/Control" unique_id=401745297]
+[node name="Button" type="Button" parent="Player/Timer/GameOverScreen/Control" unique_id=554859933]
 layout_mode = 0
-offset_left = 474.0
-offset_top = 288.0
-offset_right = 702.0
-offset_bottom = 337.0
+offset_left = 478.0
+offset_top = 292.0
+offset_right = 486.0
+offset_bottom = 300.0
+scale = Vector2(28.190327, 11.094303)
+
+[node name="Countdown" type="Label" parent="Player/Timer/GameOverScreen/Control/Button" unique_id=401745297]
+layout_mode = 0
+offset_left = -0.070944995
+offset_top = 13.5204525
+offset_right = 227.92906
+offset_bottom = 62.520454
+scale = Vector2(0.036755078, 0.131797)
 theme_override_font_sizes/font_size = 27
 text = "Respawning in x"
+script = ExtResource("4_frp2q")
+
+[node name="ColorRect" type="ColorRect" parent="Player/Timer/GameOverScreen/Control/Button" unique_id=1451328609]
+layout_mode = 0
+offset_left = -0.9932475
+offset_top = -0.5408182
+offset_right = 39.006752
+offset_bottom = 39.459183
+scale = Vector2(0.2387415, 0.2432668)
+mouse_filter = 2
+
+[node name="Label" type="Label" parent="Player/Timer/GameOverScreen/Control/Button/ColorRect" unique_id=3087157]
+layout_mode = 0
+offset_left = 1.3372558
+offset_top = 2.2231474
+offset_right = 71.33726
+offset_bottom = 25.223148
+scale = Vector2(0.3173657, 0.8394814)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "Respawn"
 
 [node name="Roads" type="Node3D" parent="." unique_id=564614269]
 
@@ -66,3 +97,4 @@ player = NodePath("../Player")
 power = NodePath("../Power")
 
 [connection signal="timeout" from="Player/Timer" to="Player" method="_on_timer_timeout"]
+[connection signal="pressed" from="Player/Timer/GameOverScreen/Control/Button" to="Player" method="_on_button_pressed"]
