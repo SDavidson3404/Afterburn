@@ -42,6 +42,13 @@ func _process(delta: float) -> void:
 	if not gadget_pickup_scene:
 		return
 
+	# Pause timer countdown when run is inactive (menu screens or game over)
+	var target_player := _get_moving_target()
+	if target_player:
+		var power_mgr = target_player.get("power_node") as Node
+		if power_mgr and not power_mgr.get("is_run_active"):
+			return
+
 	_spawn_timer -= delta
 	if _spawn_timer <= 0.0:
 		_spawn_gadget()

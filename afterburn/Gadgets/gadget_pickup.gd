@@ -89,3 +89,5 @@ func _trigger_pickup_effect(player: Node3D) -> void:
 	var gadget_instance: GadgetBase = GadgetBase.create_by_id(gadget_id)
 	if gadget_instance:
 		gadget_instance.activate_ability(player, power_mgr)
+		# Free temporary factory instance to prevent memory leaks
+		gadget_instance.free()
