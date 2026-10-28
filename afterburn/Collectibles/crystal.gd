@@ -2,6 +2,9 @@ extends collectible
 
 var spawner: Node = null
 
+func _ready() -> void:
+	add_to_group("Collectibles") # Enables magnet tracking
+
 ## Receives reference to the spawner upon instantiation
 func set_spawner(spawner_node: Node) -> void:
 	spawner = spawner_node

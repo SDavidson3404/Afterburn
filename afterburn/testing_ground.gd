@@ -1,20 +1,21 @@
+## Automated test suite verifying SQLite persistence, power physics formulas, invincibility state pipelines, and crystal spawner reaction math.
 extends Node
 
+
 func _ready() -> void:
-	
-	# The following line will clear all data from the stats table. Uncomment it to execute when needed
+	# Optional query clearing existing database records during test runs:
 	# DatabaseManager.db.query("DELETE FROM stats;")
 	
 	print("====================================")
 	print("--- FULL DATABASE MANAGER TEST ---")
 	print("====================================\n")
 	
-	# 1. Check initial lifetime stats on database read
+	# 1. Verify initial lifetime stats prior to active run simulation
 	print("--- 1. INITIAL LIFETIME STATS ---")
 	print("Lifetime Stats: ", DatabaseManager.lifetime_stats())
 	print("------------------------------------\n")
 	
-	# 2. Simulate Run 1 (Triggers all tracking methods)
+	# 2. Simulate Run 1 (Validates scoring tracking callbacks)
 	print("--- 2. SIMULATING RUN #1 ---")
 	DatabaseManager.add_distance(3200.0)         # 3200 meters = 3200 travel points
 	DatabaseManager.add_dodge("jump")            # 1 jump dodge (+10 pts)
@@ -22,35 +23,35 @@ func _ready() -> void:
 	DatabaseManager.add_dodge("dash")            # 1 dash dodge (+10 pts)
 	DatabaseManager.add_crystal()                # 1 crystal (+100 pts)
 	DatabaseManager.add_crystal()                # 2 crystals (+100 pts)
-	DatabaseManager.add_gadget()                 # 1 gadget
-	DatabaseManager.player_crash("robot")        # 1 robot crash
-	DatabaseManager.player_crash("scaffolding")  # 1 scaffolding crash
-	DatabaseManager.player_crash("drone")        # 1 drone crash
+	DatabaseManager.add_gadget()                 # 1 gadget pickup
+	DatabaseManager.player_crash("robot")        # 1 robot collision
+	DatabaseManager.player_crash("scaffolding")  # 1 scaffolding collision
+	DatabaseManager.player_crash("drone")        # 1 drone collision
 	
 	print("Current Calculated Score (Expected 3430): ", DatabaseManager.display_score())
 	
-	# 3. Save Run 1 to SQLite
+	# 3. Persist Run 1 row to SQLite database
 	var run1_data: Dictionary = DatabaseManager.save_run()
 	print("Data Saved for Run 1: ", run1_data)
 	
-	# 4. Reset active run stats
+	# 4. Reset active run tracking state
 	DatabaseManager.reset_run_stats()
 	print("Score After Reset (Expected 0): ", DatabaseManager.display_score())
 	print("------------------------------------\n")
 	
-	# 5. Verify lifetime stats updated for 1 run
+	# 5. Verify aggregated lifetime stats after initial record insertion
 	print("--- 3. LIFETIME STATS AFTER RUN 1 ---")
 	print("Lifetime Stats: ", DatabaseManager.lifetime_stats())
 	print("------------------------------------\n")
 	
-	# 6. Simulate Run 2 (Tests multi-run aggregation, MAX, and SUM logic)
+	# 6. Simulate Run 2 (Validates multi-run aggregation, MAX, and SUM logic)
 	print("--- 4. SIMULATING RUN #2 ---")
 	DatabaseManager.add_distance(6400.0)   # 6400 meters = 6400 travel points
 	DatabaseManager.add_dodge("jump")      # 1 dodge (+10 pts)
 	DatabaseManager.add_crystal()          # 1 crystal (+100 pts)
 	DatabaseManager.add_gadget()           # 1 gadget
 	DatabaseManager.add_gadget()           # 2 gadgets
-	DatabaseManager.player_crash("robot")  # 1 robot crash
+	DatabaseManager.player_crash("robot")  # 1 robot collision
 	
 	print("Run 2 Calculated Score (Expected 6510): ", DatabaseManager.display_score())
 	var run2_data: Dictionary = DatabaseManager.save_run()
@@ -58,7 +59,7 @@ func _ready() -> void:
 	DatabaseManager.reset_run_stats()
 	print("------------------------------------\n")
 	
-	# 7. Check final lifetime accumulation totals
+	# 7. Print final lifetime aggregation totals
 	print("--- 5. FINAL LIFETIME STATS (2 TOTAL RUNS) ---")
 	print("Lifetime Stats: ", DatabaseManager.lifetime_stats())
 	print("====================================\n")
@@ -68,18 +69,19 @@ func _ready() -> void:
 	
 	# Execute Crystal Spawner test suite
 	run_crystal_spawn_tests()
-	
-## Comprehensive test suite for power.gd physics, invincibility, catch-up math, and signals
+
+
+## Unit test suite for power.gd physics, invincibility, catch-up math, and signals.
 func run_power_tests() -> void:
 	print("====================================")
 	print("--- FULL POWER TEST ---")
 	print("====================================\n")
 	
-	# Instantiate power node into tree so scene calls work safely
+	# Instantiate power manager node into scene tree
 	var power: Node = preload("res://power.gd").new()
 	add_child(power)
 	
-	# Use single-element arrays to safely pass boolean flags by reference into lambdas
+	# Single-element arrays allow pass-by-reference mutation inside lambda callbacks
 	var signal_power_updated: Array = [false]
 	var signal_invincible_updated: Array = [false]
 	var signal_game_over_fired: Array = [false]
@@ -102,7 +104,7 @@ func run_power_tests() -> void:
 	print("--- 2. TIME STEP & SQRT DISTANCE ACCELERATION ---")
 	signal_power_updated[0] = false
 	
-	# Simulate 10 seconds of gameplay in steps of 1 second
+	# Advance 10 simulated process steps (1.0 second per step)
 	for i in range(10):
 		power._process(1.0)
 		
@@ -121,7 +123,6 @@ func run_power_tests() -> void:
 	
 	# --- TEST 4: DRAIN TO ZERO & COASTING TRIGGER ---
 	print("--- 4. ZERO POWER COASTING TRIGGER ---")
-	# Process 6 more seconds to drain remaining 25 power to 0
 	for i in range(6):
 		power._process(1.0)
 		
@@ -141,7 +142,6 @@ func run_power_tests() -> void:
 	print("Invincibility Timer: ", power.invincibility_timer, "s (Expected: 3.0)")
 	print("Invincibility Signal Emitted: ", signal_invincible_updated[0], " (Expected: true)")
 	
-	# Simulate 1 second step inside the invincibility window
 	power._process(1.0)
 	print("Power after 1s Invincibility (Paused Drain): ", power.current_power, " (Expected: 100.0)")
 	print("Speed after 1s Catch-Up: ", power.current_speed, " m/s (Expected: higher than ", coasting_speed, " m/s)")
@@ -149,13 +149,12 @@ func run_power_tests() -> void:
 	
 	# --- TEST 6: OBSTACLE IMMUNITY DURING INVINCIBILITY ---
 	print("--- 6. OBSTACLE IMMUNITY DURING INVINCIBILITY ---")
-	power.obstacle_hit(25.0) # Attempt to deal damage during invincibility
+	power.obstacle_hit(25.0)
 	print("Power after Obstacle Hit while Invincible: ", power.current_power, " (Expected: 100.0)")
 	print("------------------------------------\n")
 	
 	# --- TEST 7: CATCH-UP COMPLETION & INVINCIBILITY EXPIRATION ---
 	print("--- 7. CATCH-UP COMPLETION & INVINCIBILITY EXPIRATION ---")
-	# Process remaining 2 seconds of invincibility frame-by-frame
 	power._process(1.0)
 	power._process(1.0)
 	
@@ -163,7 +162,6 @@ func run_power_tests() -> void:
 	print("Invincibility Signal Emitted (False): ", signal_invincible_updated[0] == false, " (Expected: true)")
 	print("Current Speed vs Target Speed: ", power.current_speed, " / ", power.target_speed, " m/s")
 	
-	# Process 1 additional second to verify power drain continues post-invincibility
 	power._process(1.0)
 	print("Power after 1s post-invincibility drain: ", power.current_power, " (Expected: 95.0)")
 	print("------------------------------------\n")
@@ -171,23 +169,23 @@ func run_power_tests() -> void:
 	# --- TEST 8: COASTING OBSTACLE HIT (INSTANT GAME OVER) ---
 	print("--- 8. COASTING OBSTACLE HIT (INSTANT GAME OVER) ---")
 	power.is_coasting = true
-	signal_game_over_fired[0] = false # Mutate existing array element
+	signal_game_over_fired[0] = false
 	
 	power.obstacle_hit(25.0)
 	print("Game Over Signal Emitted: ", signal_game_over_fired[0], " (Expected: true)")
 	print("Run Active state: ", power.is_run_active, " (Expected: false)")
 	print("====================================")
 	
-	# Clean up test node
 	power.queue_free()
-	
-	## Comprehensive test suite for crystal_spawn.gd spawner logic, curves, and lifecycle
+
+
+## Unit test suite for crystal_spawn.gd spawner logic, curves, and lifecycle.
 func run_crystal_spawn_tests() -> void:
 	print("====================================")
 	print("--- FULL CRYSTAL SPAWN TEST ---")
 	print("====================================\n")
 	
-	# 1. Setup Test Hierarchy
+	# 1. Setup isolated test node tree
 	var test_root := Node3D.new()
 	add_child(test_root)
 	
@@ -198,13 +196,13 @@ func run_crystal_spawn_tests() -> void:
 	var power_node: Node = preload("res://power.gd").new()
 	test_root.add_child(power_node)
 	
-	# Create a dummy PackedScene for crystal spawning
+	# Construct dynamic dummy PackedScene resource for crystal instantiation
 	var dummy_crystal := Node3D.new()
 	var dummy_scene := PackedScene.new()
 	dummy_scene.pack(dummy_crystal)
 	dummy_crystal.free()
 	
-	# Instantiate Crystal Spawner
+	# Instantiate crystal spawner
 	var spawner_script = preload("res://crystal_spawn.gd")
 	var spawner = Node3D.new()
 	spawner.set_script(spawner_script)
@@ -217,13 +215,13 @@ func run_crystal_spawn_tests() -> void:
 	
 	# --- TEST 1: SPEED & REACTION TIME CURVE HELPER MATH ---
 	print("--- 1. SPEED & REACTION TIME CURVES ---")
-	var clamped_base_speed: float = spawner._get_clamped_speed()
-	var base_reaction: float = spawner._get_reaction_time(clamped_base_speed)
-	print("Base Speed (15 m/s) Clamped: ", clamped_base_speed, " (Expected: 15.0)")
-	print("Base Reaction Time: ", base_reaction, "s (Expected: 3.0)")
+	var base_reaction: float = power_node.get_reaction_time()
+	print("Base Reaction Time (15 m/s): ", base_reaction, "s (Expected: 3.0)")
 	
-	var mach1_reaction: float = spawner._get_reaction_time(spawner.max_speed)
+	power_node.target_speed = power_node.max_speed
+	var mach1_reaction: float = power_node.get_reaction_time()
 	print("Mach 1 (343 m/s) Reaction Time: ", mach1_reaction, "s (Expected: 1.0)")
+	power_node.target_speed = power_node.base_speed
 	print("------------------------------------\n")
 	
 	# --- TEST 2: INITIAL SPAWN TIMER CALCULATIONS ---
@@ -231,7 +229,6 @@ func run_crystal_spawn_tests() -> void:
 	print("Is Waiting to Spawn: ", spawner._is_waiting_to_spawn, " (Expected: true)")
 	print("Spawn Timer Armed (> 0s): ", spawner._spawn_timer > 0.0)
 	
-	# Fast-forward process to force spawn crystal
 	var time_to_wait: float = spawner._spawn_timer + 0.1
 	spawner._process(time_to_wait)
 	
@@ -250,15 +247,14 @@ func run_crystal_spawn_tests() -> void:
 	
 	# --- TEST 4: CRYSTAL MISSED EVENT ---
 	print("--- 4. CRYSTAL MISSED EVENT ---")
-	# Force spawn a crystal
 	spawner._process(spawner._spawn_timer + 0.1)
 	var second_crystal: Node3D = spawner._active_crystal
 	print("Second Crystal Spawned: ", is_instance_valid(second_crystal), " (Expected: true)")
 	
-	# Move crystal behind player (> 5 meters) to simulate passing
+	# Position crystal behind player (> 5 units) to simulate missed pickup
 	if is_instance_valid(second_crystal):
 		second_crystal.global_position = player_node.global_position + Vector3(0, 0, 6.0)
-		spawner._process(0.1) # Triggers on_crystal_missed inside _process
+		spawner._process(0.1)
 		
 	print("Active Crystal Freed After Passing Player: ", not is_instance_valid(spawner._active_crystal), " (Expected: true)")
 	print("Is Waiting for Next Spawn: ", spawner._is_waiting_to_spawn, " (Expected: true)")
@@ -273,5 +269,4 @@ func run_crystal_spawn_tests() -> void:
 	print("Spawn Timer Includes Invincibility (>= 3.0s): ", spawner._spawn_timer >= 3.0)
 	print("====================================\n")
 	
-	# Clean up test hierarchy
 	test_root.queue_free()

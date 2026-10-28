@@ -6,13 +6,15 @@
 [ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
 [ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
 [ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
+[ext_resource type="PackedScene" uid="uid://dq8tr83phbqvk" path="res://UI/loadout_ui.tscn" id="7_alr7o"]
+[ext_resource type="PackedScene" uid="uid://cx1kihp4k4g7r" path="res://Gadgets/gadget_pickup.tscn" id="7_frp2q"]
+[ext_resource type="Script" uid="uid://q8wuo3kblhml" path="res://Gadgets/gadget_spawn.gd" id="8_ycv7h"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
 size = Vector3(21, 15, 1)
 
-[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("crystal_spawner", "player")]
+[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("player")]
 script = ExtResource("1_nxusl")
-crystal_spawner = NodePath("CrystalSpawner")
 player = NodePath("Player")
 
 [node name="Player" parent="." unique_id=196411886 node_paths=PackedStringArray("power_node", "Wall_Detection") instance=ExtResource("1_q4otm")]
@@ -44,5 +46,13 @@ player = NodePath("../Player")
 power = NodePath("../Power")
 
 [node name="Obstacles" type="Node3D" parent="." unique_id=1141337569]
+
+[node name="LoadoutUI" parent="." unique_id=1704217928 node_paths=PackedStringArray("power_node") instance=ExtResource("7_alr7o")]
+power_node = NodePath("../Power")
+
+[node name="GadgetSpawner" type="Node3D" parent="." unique_id=1430979975 node_paths=PackedStringArray("player")]
+script = ExtResource("8_ycv7h")
+gadget_pickup_scene = ExtResource("7_frp2q")
+player = NodePath("../Player")
 
 [connection signal="body_entered" from="Row_Detector" to="." method="_on_row_detector_body_entered"]
