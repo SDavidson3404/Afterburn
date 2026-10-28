@@ -108,10 +108,15 @@ func collect_crystal() -> void:
 	
 	current_power = max_power
 	is_coasting = false
-	is_invincible = true
-	invincibility_timer = crystal_invincibility_duration
-	invincibility_changed.emit(true)
-	power_changed.emit(current_power, max_power)
+	
+	# Invinsibility acts as recovery grace period, but is skipped if already at target speed
+	if current_speed < target_speed:
+		is_invincible = true
+		invincibility_timer = crystal_invincibility_duration
+		invincibility_changed.emit(true)
+	else:
+		is_invincible = false
+		invincibility_timer = 0.0
 
 ## Handles logic for the player hitting an obstacle
 func obstacle_hit(damage: float = 25.0) -> void:

@@ -12,8 +12,9 @@ signal dashing # A signal for when dashing
 @onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator" # An inidicator for when invincible
 @onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
-@onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animationplayer
+@onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
 @onready var timer: Timer = $Timer
+@onready var model: Node3D = $"Body/Main Character Placeholder"
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
 
@@ -61,7 +62,8 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("D"): move_right()
 	
 	# If Shift is pressed and the player is not currently sliding and the player is on the floor, begin slide
-	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): slide()
+	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): 
+		slide()
 	
 	# If W is pressed and the current power is greater than or equal to the cost
 	if event.is_action_pressed("W"):
@@ -100,12 +102,14 @@ func update_target_row() -> void: current_row_offset = int(row_index) * 3
 
 ## Runs 60 times a second
 func _physics_process(delta: float) -> void:
+	if not animation_player.is_playing():
+		model.play_anim("Idle")
 	# Set the power meter to reflect the current power
 	power_meter.value = power_node.current_power
 	
 	# Update text to reflect current speed and score
 	speed_label.text = ("SPEED(MPS): " + str(int(current_speed)))
-	score_label.text = ("SCORE: " + str(score))
+	score_label.text = ("SCORE: " + str(DatabaseManager.display_score()))
 	
 	# Update the row squares
 	update_row_square()
@@ -141,6 +145,7 @@ func _physics_process(delta: float) -> void:
 		if is_sliding:
 			if animation_player.current_animation == "Slide":
 				animation_player.stop()
+				
 			is_sliding = false
 		
 		# Apply jump velocity
@@ -193,13 +198,14 @@ func lose():
 
 ## Begins the sliding state
 func slide():
-	
+	model.animation_player.stop()
 	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()
 	is_sliding = true
 	
 	# Play the animation and wait for it to finish
 	animation_player.play("Slide")
+	model.play_anim("Slide")
 	await animation_player.animation_finished
 	
 	# Set sliding to false
@@ -212,3 +218,6 @@ func hit():
 
 func _on_timer_timeout() -> void:
 	get_tree().reload_current_scene()
+
+func play_body_anim(Anim_Name):
+	model.play_anim(Anim_Name)
