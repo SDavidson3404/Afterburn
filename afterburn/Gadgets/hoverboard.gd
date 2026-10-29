@@ -12,9 +12,9 @@ func _init() -> void:
 	gadget_id = "hoverboard"
 
 
-## Applies loadout handicap: Increases overall run acceleration rate by 30%.
+## Applies loadout handicap: Increases overall run acceleration rate by 15%.
 func apply_loadout_nerf(power_manager: Node) -> void:
-	power_manager.speed_acceleration *= 1.30
+	power_manager.speed_acceleration *= 1.15
 
 
 ## Triggers hoverboard active state or refreshes duration if already active.

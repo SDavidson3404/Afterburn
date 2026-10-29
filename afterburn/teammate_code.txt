@@ -1,0 +1,2752 @@
+=== FILE: res://Collectibles/collectible.gd ===
+extends Node3D
+class_name collectible
+
+# Signal for when picked up
+signal pick_up(collectible_name: String)
+
+@export var Name: String # The name of the collectible
+
+## The effect when being picked up.
+## Add to this in the extended script to add effects.
+func pick_up_effect():
+	pick_up.emit(Name)
+
+
+
+=== FILE: res://Collectibles/collectible_template.tscn ===
+[gd_scene format=3 uid="uid://s7vdp82ujmq7"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_jp6wc"]
+
+[node name="CollectibleTemplate" type="Area3D" unique_id=1412815026]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=597406546]
+shape = SubResource("SphereShape3D_jp6wc")
+
+
+
+=== FILE: res://Collectibles/crystal.gd ===
+extends collectible
+
+var spawner: Node = null
+
+## Receives reference to the spawner upon instantiation
+func set_spawner(spawner_node: Node) -> void:
+	spawner = spawner_node
+
+func _on_body_entered(body: Node3D) -> void:
+	if body.is_in_group("Player"):
+		pick_up_effect()
+
+func pick_up_effect() -> void:
+	super() # Triggers parent 'collectible' visual/sound effects
+	
+	# Notify spawner to trigger power refill, invincibility, and schedule next spawn
+	if spawner and spawner.has_method("on_crystal_collected"):
+		spawner.on_crystal_collected()
+
+
+
+=== FILE: res://Collectibles/crystal.tscn ===
+[gd_scene format=3 uid="uid://bwrujnxvsre36"]
+
+[ext_resource type="Script" uid="uid://dd8g3jlj8mecp" path="res://Collectibles/crystal.gd" id="1_2kwii"]
+[ext_resource type="PackedScene" uid="uid://s7vdp82ujmq7" path="res://Collectibles/collectible_template.tscn" id="1_lqwqg"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_l8h54"]
+emission_enabled = true
+emission = Color(0, 1, 1, 1)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_2kwii"]
+material = SubResource("StandardMaterial3D_l8h54")
+height = 1.0
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_fnnny"]
+
+[node name="Crystal" type="Node3D" unique_id=1056975304]
+script = ExtResource("1_2kwii")
+Name = "Crystal"
+
+[node name="CollectibleTemplate" parent="." unique_id=1412815026 instance=ExtResource("1_lqwqg")]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CollectibleTemplate" unique_id=2123246371]
+mesh = SubResource("CapsuleMesh_2kwii")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="CollectibleTemplate" unique_id=1155668452]
+shape = SubResource("SphereShape3D_fnnny")
+
+[connection signal="body_entered" from="CollectibleTemplate" to="." method="_on_body_entered"]
+
+
+
+=== FILE: res://combine.gd ===
+@tool
+extends EditorScript
+
+func _run():
+	var output = FileAccess.open("res://teammate_code.txt", FileAccess.WRITE)
+	if output:
+		scan_dir("res://", output)
+		output.close()
+		print("Code exported successfully to all_project_code.txt!")
+
+func scan_dir(path: String, output: FileAccess):
+	var dir = DirAccess.open(path)
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if dir.current_is_dir():
+				if not file_name.begins_with(".") and file_name != "addons":
+					scan_dir(path + file_name + "/", output)
+			else:
+				if file_name.ends_with(".gd") or file_name.ends_with(".tscn"):
+					var file_path = path + file_name
+					output.store_line("=== FILE: " + file_path + " ===")
+					var f = FileAccess.open(file_path, FileAccess.READ)
+					if f:
+						output.store_string(f.get_as_text())
+						f.close()
+					output.store_line("\n\n")
+			file_name = dir.get_next()
+
+
+
+=== FILE: res://crystal_spawn.gd ===
+extends Node3D
+
+@export_category("Node References")
+@export var crystal_scene: PackedScene
+@export var player: Node3D
+@export var power: Node # Central power.gd node reference
+
+@export_category("Fuel Drain & Invincibility")
+@export var invincibility_duration: float = 3.0 # Must match crystal_invincibility_duration in power.gd
+@export var min_drain_time: float = 4.0 # 20% power loss (4.0s * 5 power/sec drain rate)
+@export var max_drain_time: float = 5.0 # 25% power loss (5.0s * 5 power/sec drain rate)
+
+@export_category("Speed & Reaction Curve")
+@export var base_speed: float = 15.0
+@export var max_speed: float = 343.0 # Mach 1
+@export var max_reaction_time: float = 3.00 # Reaction window at 15 m/s (45m spawn distance)
+@export var min_reaction_time: float = 1.00 # Reaction window at Mach 1 (343m spawn distance)
+
+@export_category("Lanes Setup")
+@export var lane_width: float = 3.0
+@export var total_lanes: int = 5
+
+var _active_crystal: Node3D = null
+var _spawn_timer: float = 0.0
+var _is_waiting_to_spawn: bool = false
+
+## Initial spawn timer at run start
+func _ready() -> void:
+	_calculate_and_start_spawn_timer()
+
+## Tracks active crystal position and counts down spawn timers
+func _process(delta: float) -> void:
+	if not power or not power.get("is_run_active"):
+		return
+
+	# 1. Track active crystal passing behind the player (Missed crystal)
+	if is_instance_valid(_active_crystal):
+		# Get Z position relative to the player's forward orientation (-Z is forward)
+		var relative_z: float = player.body.to_local(_active_crystal.global_position).z
+		if relative_z > 5.0: # 5 meters past the player
+			print("YOU MISSED")
+			on_crystal_missed()
+		return # Do not count down spawn timer while a crystal exists on track
+
+	# 2. Count down timer for the next crystal to spawn
+	if _is_waiting_to_spawn:
+		_spawn_timer -= delta
+		if _spawn_timer <= 0.0:
+			_is_waiting_to_spawn = false
+			spawn_crystal()
+
+## Spawns a single crystal ahead of the player based on scaled current speed and reaction time
+func spawn_crystal() -> void:
+	if not crystal_scene or is_instance_valid(_active_crystal):
+		return
+
+	var crystal = crystal_scene.instantiate() as Node3D
+	get_parent().add_child(crystal)
+	_active_crystal = crystal
+
+	if crystal.has_method("set_spawner"):
+		crystal.set_spawner(self)
+
+	# Fetch speed and reaction values via helper methods
+	var clamped_speed: float = _get_clamped_speed()
+	var reaction_time: float = _get_reaction_time(clamped_speed)
+	var spawn_distance: float = clamped_speed * reaction_time
+
+	# Select random lane from -2 to +2 index
+	var random_lane: int = randi() % total_lanes
+	@warning_ignore("integer_division")
+	var lane_offset_index: int = random_lane - (total_lanes / 2)
+	var x_offset: float = lane_offset_index * lane_width
+
+	# Position crystal ahead of the player into a random lane
+	var spawn_pos: Vector3 = player.body.global_position
+	spawn_pos += -player.body.global_transform.basis.z * spawn_distance
+	spawn_pos.x = x_offset
+	spawn_pos.y = randf_range(1.5, 2.5)
+
+	crystal.global_position = spawn_pos
+
+## Called by crystal.gd when player collects crystal
+func on_crystal_collected() -> void:
+	_clear_active_crystal()
+
+	if power:
+		power.collect_crystal()
+	
+	# Add score and stat tracking to DatabaseManager
+	if get_node_or_null("/root/DatabaseManager"):
+		DatabaseManager.add_crystal()
+	
+	_calculate_and_start_spawn_timer()
+
+## Called when player passes the crystal without collecting it
+func on_crystal_missed() -> void:
+	_clear_active_crystal()
+
+	_calculate_and_start_spawn_timer()
+
+## Removes the active crystal from memory
+func _clear_active_crystal() -> void:
+	if is_instance_valid(_active_crystal):
+		_active_crystal.queue_free()
+		_active_crystal = null
+
+## Calculates next crystal spawn arrival delay using target speed to maintain core difficulty.
+func _calculate_and_start_spawn_timer() -> void:
+	# Uses target_speed so spawn distance does not shrink as the player slows down
+	# This prevents the system from artificially rescuing coasting players with close spawns, ensuring low-speed coasting remains a high-risk scenario
+	var clamped_speed: float = _get_clamped_speed()
+	var reaction_time: float = _get_reaction_time(clamped_speed)
+	var target_drain_time: float = randf_range(min_drain_time, max_drain_time)
+
+	# Freezes the crystal spawn timer until invinsibility wears off
+	var active_invincibility: float = 0.0
+	if power and power.get("is_invincible"):
+		active_invincibility = power.get("invincibility_timer")
+
+	# Enforce safety floor so timer is never <= 0
+	_spawn_timer = active_invincibility + target_drain_time - reaction_time
+	_spawn_timer = maxf(0.05, _spawn_timer)
+	_is_waiting_to_spawn = true
+
+## Safely fetches and clamps target speed within valid bounds
+func _get_clamped_speed() -> float:
+	var target_speed: float = power.get("target_speed") if power and power.get("target_speed") != null else base_speed
+	return clampf(target_speed, base_speed, max_speed)
+
+## Shorten reaction time as speed increases: 3.00s at 15 m/s down to 1.00s at Mach 1 (343 m/s)
+func _get_reaction_time(speed: float) -> float:
+	return remap(speed, base_speed, max_speed, max_reaction_time, min_reaction_time)
+
+
+
+=== FILE: res://DatabaseManager.gd ===
+extends Node
+
+var db: SQLite
+
+# Distance and distance scoring variables
+const POINTS_PER_METER: float = 1.0
+var total_distance_meters: int = 0
+var meters_traveled: float = 0.0
+var travel_score: int = 0
+
+# Dodge scoring variables
+const POINTS_PER_DODGE: int = 10
+var dodge_score: int = 0
+
+# Crystal scoring variables
+const CRYSTAL_POINTS: int = 100
+var crystal_score: int = 0
+
+# Stat tracking counters
+var power_crystals: int = 0
+var gadgets: int = 0
+var jump_obstacle: int = 0
+var slide_obstacle: int = 0
+var dash_obstacle: int = 0
+var robot_crash: int = 0
+var scaffolding_crash: int = 0
+var drone_crash: int = 0
+
+## Initializes SQLite database connection and creates required tables
+func _ready() -> void:
+	db = SQLite.new()
+	db.path = "user://game_data.db"
+	db.open_db()
+	
+	# Removes unused tables. Will delete later, after each teammate executes this
+	db.query("DROP TABLE IF EXISTS scores;")
+	db.query("DROP TABLE IF EXISTS Scores;")
+	
+	create_stats_table()
+
+## Creates stats table schema if it does not already exist
+func create_stats_table() -> void:
+	var stats_query:="""
+	CREATE TABLE IF NOT EXISTS stats (
+		stats_id INTEGER PRIMARY KEY,
+		total_distance INTEGER,
+		travel_score INTEGER,
+		dodge_score INTEGER,
+		crystal_score INTEGER,
+		total_score INTEGER,
+		power_crystals INTEGER,
+		gadgets INTEGER,
+		jump_obstacle INTEGER,
+		slide_obstacle INTEGER,
+		dash_obstacle INTEGER,
+		robot_crash INTEGER,
+		scaffolding_crash INTEGER,
+		drone_crash INTEGER
+	);
+	"""
+	db.query(stats_query)
+
+## Tracks distance traveled during an active run and updates travel score
+func add_distance(meters_moved: float) -> void:
+	meters_traveled += meters_moved
+	total_distance_meters = int(meters_traveled)
+	travel_score = int(total_distance_meters * POINTS_PER_METER)
+
+## Logs obstacle dodges by type and increments dodge score
+func add_dodge(dodge_type: String = "") -> void:
+	dodge_score += POINTS_PER_DODGE
+	if dodge_type == "jump":
+		jump_obstacle += 1
+	elif dodge_type == "slide":
+		slide_obstacle += 1
+	elif dodge_type == "dash":
+		dash_obstacle += 1
+
+## Logs collected power crystals and updates crystal score
+func add_crystal() -> void:
+	crystal_score += CRYSTAL_POINTS
+	power_crystals += 1
+
+## Increments total gadget pickup count
+func add_gadget() -> void:
+	gadgets += 1
+
+## Returns total combined score across movement, dodges, and crystals for UI display
+func display_score() -> int:
+	return (travel_score + dodge_score + crystal_score)
+
+## Logs obstacle crashes by type
+func player_crash(crash_type: String = "") -> void:
+	if crash_type == "robot":
+		robot_crash += 1
+	elif crash_type == "scaffolding":
+		scaffolding_crash += 1
+	elif crash_type == "drone":
+		drone_crash += 1
+
+## Saves current run stats into database and returns as a dictionary to game over UI
+func save_run() -> Dictionary:
+	var run_data: Dictionary = {
+		"total_distance": total_distance_meters,
+		"travel_score": travel_score,
+		"dodge_score": dodge_score,
+		"crystal_score": crystal_score,
+		"total_score": display_score(),
+		"power_crystals": power_crystals,
+		"gadgets": gadgets,
+		"jump_obstacle": jump_obstacle,
+		"slide_obstacle": slide_obstacle,
+		"dash_obstacle": dash_obstacle,
+		"robot_crash": robot_crash,
+		"scaffolding_crash": scaffolding_crash,
+		"drone_crash": drone_crash
+	}
+	db.insert_row("stats", run_data)
+	return run_data
+
+## Resets active run stats back to 0
+func reset_run_stats() -> void:
+	total_distance_meters = 0
+	meters_traveled = 0.0
+	travel_score = 0
+	dodge_score = 0
+	crystal_score = 0
+	power_crystals = 0
+	gadgets = 0
+	jump_obstacle = 0
+	slide_obstacle = 0
+	dash_obstacle = 0
+	robot_crash = 0
+	scaffolding_crash = 0
+	drone_crash = 0
+
+## Queries database for high scores and total lifetime player stats
+func lifetime_stats() -> Dictionary:
+	var lifetime_query: String = """
+	SELECT
+		COUNT(*) AS total_runs,
+		COALESCE(MAX(total_score), 0) AS high_score,
+		COALESCE(MAX(total_distance), 0) AS max_distance,
+		COALESCE(MAX(power_crystals), 0) AS max_crystals,
+		COALESCE(MAX(jump_obstacle + slide_obstacle + dash_obstacle), 0) AS max_dodges,
+		COALESCE(SUM(total_distance), 0) AS total_distance,
+		COALESCE(SUM(power_crystals), 0) AS total_crystals,
+		COALESCE(SUM(gadgets), 0) AS total_gadgets,
+		COALESCE(SUM(jump_obstacle + slide_obstacle + dash_obstacle), 0) AS total_dodges,
+		COALESCE(SUM(robot_crash), 0) AS robot_crashes,
+		COALESCE(SUM(scaffolding_crash), 0) AS scaffolding_crashes,
+		COALESCE(SUM(drone_crash), 0) AS drone_crashes
+	FROM stats;
+	"""
+	# COALESCE(..., 0) displays default values when no run data exists yet
+	db.query(lifetime_query)
+	if db.query_result.size() > 0:
+		return db.query_result[0]
+	return {}
+
+
+
+=== FILE: res://Obstacles/Obstacle.gd ===
+extends Area3D
+class_name Obstacle
+
+@export_enum("Jump", "False", "Slide") var dodge_capabilities: String = "False" # An indicator for how to dodge
+@export var Row_Count: int = 1 # The amount of rows that this takes up
+@export_enum("Left", "Single", "Right") var direction_stretched: String = "Single" # The direction it stretches in
+@export var possible_main_rows: Array[int]
+
+
+
+=== FILE: res://Obstacles/Sliding_Beam.tscn ===
+[gd_scene format=3 uid="uid://sw4x7xiwxjtq"]
+
+[ext_resource type="Script" uid="uid://dqg6mc2gc5tsw" path="res://Obstacles/Obstacle.gd" id="1_r3igq"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
+size = Vector3(3, 1, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
+size = Vector3(3, 1, 3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fnnny"]
+size = Vector3(3, 4, 0.6347656)
+
+[sub_resource type="BoxMesh" id="BoxMesh_r8tgl"]
+size = Vector3(3, 4, 0.6290283)
+
+[node name="Testing Beam" type="Area3D" unique_id=553523956]
+script = ExtResource("1_r3igq")
+dodge_capabilities = "Slide"
+possible_main_rows = Array[int]([1, 2, 3, 4, 5])
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1760226055]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("BoxShape3D_jp6wc")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=655153980]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="." unique_id=150103972]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 1.1750157, 0.032791138, -0.0076014483)
+shape = SubResource("BoxShape3D_fnnny")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1433633354]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 1.1778843, 0.36614776, -0.007601448)
+mesh = SubResource("BoxMesh_r8tgl")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="." unique_id=852480883]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.1778843, 0.5, -0.0076015512)
+shape = SubResource("BoxShape3D_fnnny")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=914876666]
+transform = Transform3D(-0.00033225614, -0.0034997265, -0.9999938, -0.0006427576, 0.9999937, -0.0034995128, 0.99999976, 0.0006415923, -0.0003345008, -1.1750157, 0.5, -0.007601551)
+mesh = SubResource("BoxMesh_r8tgl")
+
+
+
+=== FILE: res://Obstacles/Testing_Beam.tscn ===
+[gd_scene format=3 uid="uid://djqnjrko7x4rj"]
+
+[ext_resource type="Script" uid="uid://dqg6mc2gc5tsw" path="res://Obstacles/Obstacle.gd" id="1_mjqo8"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
+size = Vector3(3, 2, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
+size = Vector3(3, 2, 3)
+
+[node name="Testing Beam" type="Area3D" unique_id=553523956]
+script = ExtResource("1_mjqo8")
+dodge_capabilities = "Jump"
+possible_main_rows = Array[int]([1, 2, 3, 4, 5])
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1760226055]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("BoxShape3D_jp6wc")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=655153980]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_jp6wc")
+
+
+
+=== FILE: res://Obstacles/Wall.tscn ===
+[gd_scene format=3 uid="uid://cvfh8d452e1gd"]
+
+[ext_resource type="Script" uid="uid://dqg6mc2gc5tsw" path="res://Obstacles/Obstacle.gd" id="1_2cro7"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_r8tgl"]
+size = Vector3(3, 8, 3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fnnny"]
+size = Vector3(3, 8, 3)
+
+[node name="Wall" type="Area3D" unique_id=1026001732]
+script = ExtResource("1_2cro7")
+possible_main_rows = Array[int]([1, 2, 3, 4, 5])
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1460503124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+mesh = SubResource("BoxMesh_r8tgl")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1925201425]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+shape = SubResource("BoxShape3D_fnnny")
+
+
+
+=== FILE: res://Player/Model + anims.tscn ===
+[gd_scene format=3 uid="uid://cxjb600ea3tbt"]
+
+[ext_resource type="PackedScene" uid="uid://15kkce08vjfx" path="res://Models/Main Character Placeholder.blend" id="1_27p27"]
+[ext_resource type="Script" uid="uid://rjp8sobbeqb7" path="res://Player/model.gd" id="2_k2uew"]
+
+[sub_resource type="Animation" id="Animation_k2uew"]
+resource_name = "Idle"
+length = 3.0000000000000004
+loop_mode = 1
+tracks/0/type = "rotation_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Armature/Skeleton3D:Bone")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, -1.2887436e-08, -4.268364e-08, -0.25780466, 0.9661971, 0.14, 1, -1.2887434e-08, -4.268364e-08, -0.25780463, 0.9661971, 0.27, 1, -1.2887437e-08, -4.2683645e-08, -0.25780463, 0.96619713, 0.45, 1, -1.2887437e-08, -4.2683645e-08, -0.25780463, 0.9661971, 0.69, 1, -1.2887437e-08, -4.268365e-08, -0.25780463, 0.96619713, 0.9, 1, -1.2887437e-08, -4.2683645e-08, -0.25780463, 0.9661971, 2.4, 1, -1.2887437e-08, -4.2683645e-08, -0.25780463, 0.9661971, 3, 1, -1.2887437e-08, -4.2683645e-08, -0.25780466, 0.96619713)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Armature/Skeleton3D:Bone.001")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, -6.528312e-09, 6.1060746e-08, -0.24147429, 0.97040725, 0.14, 1, -6.5283126e-09, 6.106074e-08, -0.24147429, 0.97040725, 0.27, 1, -6.5283126e-09, 6.106074e-08, -0.2414743, 0.9704073, 0.45, 1, -6.5283112e-09, 6.106073e-08, -0.24147429, 0.97040725, 0.69, 1, -6.5283103e-09, 6.1060724e-08, -0.2414743, 0.9704072, 0.9, 1, -6.5283103e-09, 6.1060724e-08, -0.2414743, 0.9704072, 2.4, 1, -6.5283103e-09, 6.1060724e-08, -0.2414743, 0.9704072, 3, 1, -6.528312e-09, 6.1060746e-08, -0.2414743, 0.9704073)
+tracks/2/type = "rotation_3d"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Armature/Skeleton3D:Bone.010")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, -0.68922603, -0.0019045062, -0.0019045161, 0.72454137, 0.14, 1, -0.68922603, -0.0019045064, -0.0019045162, 0.72454137, 0.27, 1, -0.68922603, -0.0019045064, -0.0019045162, 0.72454137, 0.45, 1, -0.68922603, -0.0019045064, -0.0019045162, 0.72454137, 0.69, 1, -0.68922603, -0.0019045065, -0.0019045161, 0.72454137, 0.9, 1, -0.68922603, -0.0019045065, -0.0019045161, 0.72454137, 2.4, 1, -0.68922603, -0.0019045065, -0.0019045161, 0.72454137, 3, 1, -0.68922603, -0.0019045062, -0.0019045161, 0.72454137)
+tracks/3/type = "rotation_3d"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Armature/Skeleton3D:Bone.012")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = PackedFloat32Array(0, 1, -0.65875643, 0.064967096, 0.12442034, 0.73914737, 0.14, 1, -0.64834553, 0.11950024, 0.16809513, 0.73287916, 0.27, 1, -0.5254158, 0.14249766, 0.106324, 0.8320624, 0.45, 1, -0.5528747, -0.25644198, -0.12713645, 0.7825621, 0.69, 1, -0.46525142, -0.5465275, -0.31592402, 0.6205166, 0.9, 1, 0.2948324, 0.5948437, 0.6944615, -0.27741307, 2.4, 1, 0.2948324, 0.5948437, 0.6944615, -0.27741307, 3, 1, -0.6587564, 0.06496709, 0.12442034, 0.73914737)
+tracks/4/type = "rotation_3d"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Armature/Skeleton3D:Bone.014")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = PackedFloat32Array(0, 1, -0.051643547, -0.061692677, -0.16154338, 0.9835805, 0.14, 1, -0.051643547, -0.061692685, -0.1615434, 0.98358065, 0.27, 1, -0.051643543, -0.061692685, -0.16154338, 0.9835805, 0.45, 1, -0.06429987, -0.18110421, -0.47736785, 0.85743034, 0.69, 1, -0.2991261, 0.040666774, -0.5040639, 0.8091905, 0.9, 1, -0.2769046, 0.07518062, -0.54884493, 0.78513753, 2.4, 1, -0.2769046, 0.07518062, -0.54884493, 0.78513753, 3, 1, -0.051643547, -0.061692685, -0.1615434, 0.98358065)
+tracks/5/type = "rotation_3d"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Armature/Skeleton3D:Bone.019")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = PackedFloat32Array(0, 1, 0.016458252, -0.019293884, -0.1399808, 0.9898294, 0.14, 1, 0.01645825, -0.019293886, -0.13998081, 0.9898294, 0.27, 1, 0.016458249, -0.019293886, -0.13998081, 0.9898294, 0.45, 1, 0.17156297, -0.39292446, 0.09855545, 0.898033, 0.69, 1, -0.21762647, -0.50450766, -0.021592092, 0.83525115, 0.9, 1, -0.1982415, -0.46509463, -0.033290215, 0.8621363, 2.4, 1, -0.1982415, -0.46509463, -0.033290215, 0.8621363, 3, 1, 0.016458252, -0.019293886, -0.13998082, 0.9898295)
+tracks/6/type = "rotation_3d"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Armature/Skeleton3D:Bone.020")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = PackedFloat32Array(0, 1, 0.015033803, -4.0786405e-09, -0.0016215006, 0.9998857, 0.14, 1, 0.015033802, -4.07713e-09, -0.0016215006, 0.9998857, 0.27, 1, 0.015033802, -4.0771297e-09, -0.0016215006, 0.9998857, 0.45, 1, 0.015033803, -4.076821e-09, -0.0016215006, 0.9998857, 0.69, 1, -0.09045074, -0.15695809, -0.0702942, 0.98093915, 0.9, 1, -0.08094971, -0.14285883, -0.06412821, 0.9843404, 2.4, 1, -0.08094971, -0.14285883, -0.06412821, 0.9843404, 3, 1, 0.015033803, -4.0786405e-09, -0.0016215006, 0.9998857)
+tracks/7/type = "rotation_3d"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Armature/Skeleton3D:Bone.011")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = PackedFloat32Array(0, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.14, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.27, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.45, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.69, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.9, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 2.4, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 3, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987)
+tracks/8/type = "rotation_3d"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Armature/Skeleton3D:Bone.013")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = PackedFloat32Array(0, 1, 0.63668185, -4.850241e-09, 0.06867026, 0.7680629, 0.14, 1, 0.62761325, -0.076756224, 0.12530084, 0.76453245, 0.27, 1, 0.6302928, 0.21680266, -0.09473809, 0.73942703, 0.45, 1, 0.54421574, 0.4877799, -0.3074015, 0.6094296, 0.69, 1, 0.4561209, 0.6165412, -0.41354376, 0.4907262, 0.9, 1, -0.3584526, -0.52192, 0.6886906, -0.3532939, 2.4, 1, -0.3584526, -0.52192, 0.6886906, -0.3532939, 3, 1, 0.6366819, -4.6566133e-09, 0.06867027, 0.76806295)
+tracks/9/type = "rotation_3d"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Armature/Skeleton3D:Bone.015")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = PackedFloat32Array(0, 1, 0.14163214, 0.15023436, -0.3065143, 0.9292034, 0.14, 1, 0.14163214, 0.15023434, -0.30651426, 0.9292034, 0.27, 1, 0.18342136, 0.17513737, -0.5481586, 0.7969979, 0.45, 1, 0.34508023, -0.023842579, -0.46735942, 0.81358856, 0.69, 1, 0.28343028, -0.24976939, -0.7761288, 0.5048828, 0.9, 1, -0.016791252, -0.32734516, -0.6862408, 0.64933556, 2.4, 1, -0.016791252, -0.32734516, -0.6862408, 0.64933556, 3, 1, 0.14163214, 0.15023434, -0.30651426, 0.9292034)
+tracks/10/type = "rotation_3d"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Armature/Skeleton3D:Bone.018")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = PackedFloat32Array(0, 1, 0.009747677, 0.020365573, -0.16404052, 0.9861952, 0.14, 1, 0.0097476775, 0.020365573, -0.16404052, 0.98619527, 0.27, 1, 0.12172859, 0.23545979, -0.10852742, 0.95810366, 0.45, 1, 0.16523957, 0.38525665, -0.20257613, 0.8850063, 0.69, 1, 0.12589599, 0.71179026, -0.17876178, 0.66749465, 0.9, 1, 0.11760945, 0.6614292, -0.18217105, 0.71797854, 2.4, 1, 0.11760945, 0.6614292, -0.18217105, 0.71797854, 3, 1, 0.0097476775, 0.020365573, -0.16404052, 0.98619527)
+tracks/11/type = "rotation_3d"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Armature/Skeleton3D:Bone.021")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = PackedFloat32Array(0, 1, -0.025812145, -2.1908015e-09, -0.0027840089, 0.99966294, 0.14, 1, -0.025812145, -2.198075e-09, -0.0027840089, 0.99966294, 0.27, 1, -0.025812145, -2.1980793e-09, -0.0027840089, 0.99966294, 0.45, 1, -0.025812145, -2.1980786e-09, -0.0027840089, 0.99966294, 0.69, 1, -0.025812145, -2.1980795e-09, -0.0027840089, 0.99966294, 0.9, 1, -0.025812145, -2.1968158e-09, -0.002784009, 0.99966294, 2.4, 1, -0.025812145, -2.1968158e-09, -0.002784009, 0.99966294, 3, 1, -0.025812145, -2.1908015e-09, -0.0027840089, 0.99966294)
+tracks/12/type = "rotation_3d"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Armature/Skeleton3D:Bone.016")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = PackedFloat32Array(0, 1, 7.35516e-09, 1.019139e-07, -0.053695004, 0.9985574, 0.14, 1, 7.3551605e-09, 1.019139e-07, -0.053695004, 0.9985574, 0.27, 1, 7.35516e-09, 1.0191389e-07, -0.053695, 0.9985574, 0.45, 1, 7.3551596e-09, 1.0191389e-07, -0.053694997, 0.9985574, 0.69, 1, 7.35516e-09, 1.0191389e-07, -0.053694997, 0.9985574, 0.9, 1, 7.3551605e-09, 1.019139e-07, -0.053694997, 0.9985574, 2.4, 1, 7.3551605e-09, 1.019139e-07, -0.053694997, 0.9985574, 3, 1, 7.35516e-09, 1.019139e-07, -0.053695004, 0.9985574)
+tracks/13/type = "rotation_3d"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Armature/Skeleton3D:Bone.017")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = PackedFloat32Array(0, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.14, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.27, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.45, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.69, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.9, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 2.4, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 3, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866)
+tracks/14/type = "rotation_3d"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Armature/Skeleton3D:Bone.002")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = PackedFloat32Array(0, 1, 5.051398e-09, 4.4253742e-08, 0.11499699, 0.9933658, 0.14, 1, 5.051398e-09, 4.4253742e-08, 0.114997, 0.9933659, 0.27, 1, 5.051398e-09, 4.4253746e-08, 0.11499701, 0.99336594, 0.45, 1, 5.051397e-09, 4.4253742e-08, 0.11499699, 0.9933658, 0.69, 1, 5.0513975e-09, 4.4253746e-08, 0.11499701, 0.99336594, 0.9, 1, 5.0513966e-09, 4.4253742e-08, 0.114997, 0.9933658, 2.4, 1, 5.0513966e-09, 4.4253742e-08, 0.114997, 0.9933658, 3, 1, 5.051398e-09, 4.4253742e-08, 0.114997, 0.9933659)
+tracks/15/type = "rotation_3d"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Armature/Skeleton3D:Bone.004")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = PackedFloat32Array(0, 1, 1.652257e-08, 6.605542e-08, -0.684459, 0.72905135, 0.14, 1, -0.19920358, 0.06062625, -0.66945636, 0.7130712, 0.27, 1, -0.040126435, 0.0122122625, -0.68385667, 0.72840977, 0.45, 1, -0.0296581, 0.010922347, -0.7248105, 0.68822294, 0.69, 1, -0.30378178, 0.07852996, -0.68562615, 0.65686107, 0.9, 1, -0.08213207, 0.022316266, -0.7157221, 0.6931798, 2.4, 1, -0.08213207, 0.022316266, -0.7157221, 0.6931798, 3, 1, -1.6522572e-08, -6.605542e-08, 0.68445903, -0.72905135)
+tracks/16/type = "rotation_3d"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Armature/Skeleton3D:Bone.005")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = PackedFloat32Array(0, 1, 0.0057469886, -0.008309987, -0.77499694, 0.6318843, 0.14, 1, 0.005746989, -0.008309987, -0.77499694, 0.6318843, 0.27, 1, 0.005746989, -0.008309987, -0.77499694, 0.6318843, 0.45, 1, 0.0057469895, -0.008309987, -0.77499694, 0.6318843, 0.69, 1, 0.0057469895, -0.008309986, -0.7749968, 0.6318843, 0.9, 1, 0.0057469904, -0.008309987, -0.77499694, 0.63188434, 2.4, 1, 0.0057469904, -0.008309987, -0.77499694, 0.63188434, 3, 1, 0.005746989, -0.008309987, -0.77499694, 0.6318843)
+tracks/17/type = "rotation_3d"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Armature/Skeleton3D:Bone.008")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = PackedFloat32Array(0, 1, 0.005848111, 0.0041798693, 0.8864228, 0.4628207, 0.14, 1, 0.08668067, 0.18133207, 0.8666825, 0.45658144, 0.27, 1, 0.0207483, 0.036810122, 0.88534653, 0.4630076, 0.45, 1, 0.02312547, 0.028350905, 0.93861413, 0.3430234, 0.69, 1, 0.15413028, 0.3063545, 0.8765268, 0.33777452, 0.9, 1, 0.075229526, 0.13986057, 0.91845024, 0.36225513, 2.4, 1, 0.075229526, 0.13986057, 0.91845024, 0.36225513, 3, 1, 0.0058481107, 0.0041798693, 0.88642275, 0.46282065)
+tracks/18/type = "rotation_3d"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Armature/Skeleton3D:Bone.006")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = PackedFloat32Array(0, 1, -1.3068555e-08, -1.1368775e-08, 0.9777707, -0.20967707, 0.14, 1, 0.043663714, 0.013998907, 0.97674227, -0.20945656, 0.27, 1, 0.00829191, 0.1010738, 0.9734886, -0.20502515, 0.45, 1, -0.001327837, 0.07645271, 0.95024097, -0.30198562, 0.69, 1, 0.13863645, 0.1350018, 0.85789263, -0.4759986, 0.9, 1, 0.14580321, 0.0995625, 0.93853015, -0.29663086, 2.4, 1, 0.14580321, 0.0995625, 0.93853015, -0.29663086, 3, 1, -1.3068557e-08, -1.1368777e-08, 0.97777075, -0.20967709)
+tracks/19/type = "rotation_3d"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Armature/Skeleton3D:Bone.007")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = PackedFloat32Array(0, 1, 0.0025202816, -0.0022665563, -0.680525, 0.732717, 0.14, 1, -0.06480503, 0.057177022, -0.6779807, 0.7299817, 0.27, 1, -0.1433543, 0.1263821, -0.6843911, 0.7036235, 0.45, 1, -0.0951203, 0.09256734, -0.73852235, 0.6610357, 0.69, 1, -0.12500788, 0.09841513, -0.79465467, 0.5858426, 0.9, 1, -0.10798867, 0.11599938, -0.7032309, 0.6930721, 2.4, 1, -0.10798867, 0.11599938, -0.7032309, 0.6930721, 3, 1, 0.0025202816, -0.002266556, -0.680525, 0.732717)
+tracks/20/type = "rotation_3d"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Armature/Skeleton3D:Bone.009")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = PackedFloat32Array(0, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 0.14, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 0.27, 1, 0.0006992148, 0.0006898935, 0.80667156, 0.5909992, 0.45, 1, 0.0006992148, 0.00068989355, 0.8066715, 0.59099925, 0.69, 1, 0.0006992149, 0.00068989367, 0.80667156, 0.5909993, 0.9, 1, 0.00069921475, 0.00068989355, 0.80667156, 0.5909992, 2.4, 1, 0.00069921475, 0.00068989355, 0.80667156, 0.5909992, 3, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993)
+
+[sub_resource type="Animation" id="Animation_27p27"]
+resource_name = "Jumping"
+tracks/0/type = "rotation_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Armature/Skeleton3D:Bone")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, -1.2887435e-08, -4.2683645e-08, -0.25780463, 0.9661971, 0.116666675, 1, -1.2887435e-08, -4.268365e-08, -0.25780463, 0.96619713, 0.26666668, 1, -1.094464e-09, -4.4573337e-08, 0.0079268925, 0.9999686, 0.96666664, 1, -1.2887435e-08, -4.2683645e-08, -0.25780463, 0.9661971)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Armature/Skeleton3D:Bone.001")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, -6.5283112e-09, 6.106073e-08, -0.24147429, 0.97040725, 0.116666675, 1, -6.5283117e-09, 6.106073e-08, -0.2414743, 0.9704073, 0.26666668, 1, -9.669656e-10, 6.22599e-08, -0.034940887, 0.9993894, 0.96666664, 1, -6.5283112e-09, 6.106073e-08, -0.24147429, 0.97040725)
+tracks/2/type = "rotation_3d"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Armature/Skeleton3D:Bone.010")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, -0.68922603, -0.0019045064, -0.0019045162, 0.72454137, 0.116666675, 1, -0.68922603, -0.0019045065, -0.0019045161, 0.72454137, 0.26666668, 1, -0.68922603, -0.0019045065, -0.0019045161, 0.72454137, 0.96666664, 1, -0.68922603, -0.0019045064, -0.0019045162, 0.72454137)
+tracks/3/type = "rotation_3d"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Armature/Skeleton3D:Bone.012")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = PackedFloat32Array(0, 1, -0.6445915, -0.21938097, -0.21845056, 0.69903725, 0.116666675, 1, -0.64459145, -0.21938097, -0.21845058, 0.6990373, 0.26666668, 1, -0.64459145, -0.21938102, -0.21845062, 0.69903743, 0.96666664, 1, -0.6445915, -0.21938097, -0.21845056, 0.69903725)
+tracks/4/type = "rotation_3d"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Armature/Skeleton3D:Bone.014")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = PackedFloat32Array(0, 1, -0.13499597, -0.013921965, -0.307103, 0.9419502, 0.116666675, 1, -0.13499595, -0.013921966, -0.30710298, 0.9419501, 0.26666668, 1, -0.13499595, -0.013921969, -0.307103, 0.9419502, 0.96666664, 1, -0.13499597, -0.013921965, -0.307103, 0.9419502)
+tracks/5/type = "rotation_3d"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Armature/Skeleton3D:Bone.019")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = PackedFloat32Array(0, 1, -0.061095096, -0.1820691, -0.10574156, 0.97567254, 0.116666675, 1, -0.061095096, -0.1820691, -0.10574156, 0.97567254, 0.26666668, 1, -0.061095096, -0.1820691, -0.10574156, 0.97567254, 0.96666664, 1, -0.061095096, -0.1820691, -0.10574156, 0.97567254)
+tracks/6/type = "rotation_3d"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Armature/Skeleton3D:Bone.020")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = PackedFloat32Array(0, 1, -0.018574614, -0.050108097, -0.023552146, 0.9982933, 0.116666675, 1, -0.018574614, -0.050108097, -0.023552146, 0.9982933, 0.26666668, 1, -0.018574614, -0.050108097, -0.023552146, 0.9982933, 0.96666664, 1, -0.018574614, -0.050108097, -0.023552146, 0.9982933)
+tracks/7/type = "rotation_3d"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Armature/Skeleton3D:Bone.011")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = PackedFloat32Array(0, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.116666675, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.26666668, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.96666664, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987)
+tracks/8/type = "rotation_3d"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Armature/Skeleton3D:Bone.013")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = PackedFloat32Array(0, 1, 0.61985403, 0.21946716, -0.23899592, 0.7144901, 0.116666675, 1, 0.619854, 0.21946718, -0.23899592, 0.7144902, 0.26666668, 1, 0.6198539, 0.2194672, -0.23899592, 0.71449023, 0.96666664, 1, 0.61985403, 0.21946716, -0.23899592, 0.7144901)
+tracks/9/type = "rotation_3d"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Armature/Skeleton3D:Bone.015")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = PackedFloat32Array(0, 1, 0.09049916, -0.020330213, -0.46740705, 0.8791628, 0.116666675, 1, 0.09049918, -0.020330215, -0.4674071, 0.8791628, 0.26666668, 1, 0.09049919, -0.020330217, -0.46740717, 0.8791628, 0.96666664, 1, 0.09049916, -0.020330213, -0.46740705, 0.8791628)
+tracks/10/type = "rotation_3d"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Armature/Skeleton3D:Bone.018")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = PackedFloat32Array(0, 1, 0.051016364, 0.2633128, -0.18104239, 0.9461963, 0.116666675, 1, 0.051016364, 0.26331282, -0.18104239, 0.9461963, 0.26666668, 1, 0.051016364, 0.26331285, -0.18104239, 0.9461963, 0.96666664, 1, 0.051016364, 0.2633128, -0.18104239, 0.9461963)
+tracks/11/type = "rotation_3d"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Armature/Skeleton3D:Bone.021")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = PackedFloat32Array(0, 1, -0.025812143, -2.1947248e-09, -0.002784009, 0.99966294, 0.116666675, 1, -0.025812143, -2.1947262e-09, -0.002784009, 0.99966294, 0.26666668, 1, -0.025812143, -2.1947262e-09, -0.002784009, 0.99966294, 0.96666664, 1, -0.025812143, -2.1947248e-09, -0.002784009, 0.99966294)
+tracks/12/type = "rotation_3d"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Armature/Skeleton3D:Bone.016")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = PackedFloat32Array(0, 1, 7.35516e-09, 1.019139e-07, -0.053695, 0.9985574, 0.116666675, 1, 7.35516e-09, 1.019139e-07, -0.053695, 0.9985574, 0.26666668, 1, 7.35516e-09, 1.019139e-07, -0.053695, 0.9985574, 0.96666664, 1, 7.35516e-09, 1.019139e-07, -0.053695, 0.9985574)
+tracks/13/type = "rotation_3d"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Armature/Skeleton3D:Bone.017")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = PackedFloat32Array(0, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.116666675, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.26666668, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.96666664, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866)
+tracks/14/type = "rotation_3d"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Armature/Skeleton3D:Bone.002")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = PackedFloat32Array(0, 1, 5.0513975e-09, 4.4253746e-08, 0.11499701, 0.99336594, 0.116666675, 1, 5.0513966e-09, 4.4253742e-08, 0.11499699, 0.9933658, 0.26666668, 1, 5.0513966e-09, 4.4253742e-08, 0.114997, 0.9933659, 0.96666664, 1, 5.0513975e-09, 4.4253746e-08, 0.11499701, 0.99336594)
+tracks/15/type = "rotation_3d"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Armature/Skeleton3D:Bone.004")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = PackedFloat32Array(0, 1, 0.028705362, -0.0077996356, 0.6961262, -0.717303, 0.116666675, 1, 0.02870536, -0.007799636, 0.6961262, -0.717303, 0.26666668, 1, 0.01860313, -0.023211103, 0.9850589, -0.16962942, 0.96666664, 1, 0.028705362, -0.0077996356, 0.6961262, -0.717303)
+tracks/16/type = "rotation_3d"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Armature/Skeleton3D:Bone.005")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = PackedFloat32Array(0, 1, 0.00574699, -0.008309988, -0.7749969, 0.63188434, 0.116666675, 1, 0.0057469904, -0.008309988, -0.7749969, 0.63188434, 0.26666668, 1, 0.04056643, -0.009613137, -0.3178283, 0.9472313, 0.96666664, 1, 0.00574699, -0.008309988, -0.7749969, 0.63188434)
+tracks/17/type = "rotation_3d"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Armature/Skeleton3D:Bone.008")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = PackedFloat32Array(0, 1, 0.03020892, 0.05179079, 0.9011399, 0.42936218, 0.116666675, 1, 0.03020893, 0.0517908, 0.90114003, 0.42936227, 0.26666668, 1, 0.018048283, 0.041050214, 0.6285485, 0.77647656, 0.96666664, 1, 0.03020892, 0.05179079, 0.9011399, 0.42936218)
+tracks/18/type = "rotation_3d"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Armature/Skeleton3D:Bone.006")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = PackedFloat32Array(0, 1, 0.051189963, 0.034955334, 0.9685008, -0.24117213, 0.116666675, 1, -0.030282913, -0.054085396, -0.7599507, 0.6470182, 0.26666668, 1, 0.059908845, 0.015912948, 0.99353385, 0.09512172, 0.96666664, 1, 0.051189963, 0.034955334, 0.9685008, -0.24117213)
+tracks/19/type = "rotation_3d"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Armature/Skeleton3D:Bone.007")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = PackedFloat32Array(0, 1, -0.036201533, 0.039174657, -0.69068104, 0.7211896, 0.116666675, 1, -0.03787342, 0.028920788, -0.7797576, 0.6242654, 0.26666668, 1, -0.021748533, 0.07433249, -0.1741528, 0.98166823, 0.96666664, 1, -0.036201533, 0.039174657, -0.69068104, 0.7211896)
+tracks/20/type = "rotation_3d"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Armature/Skeleton3D:Bone.009")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = PackedFloat32Array(0, 1, 0.0006992148, 0.00068989355, 0.8066715, 0.59099925, 0.116666675, 1, -0.0028505914, 0.0093936045, 0.90878856, 0.41714144, 0.26666668, 1, 0.0061396644, -0.012844542, 0.58308685, 0.8122851, 0.96666664, 1, 0.0006992148, 0.00068989355, 0.8066715, 0.59099925)
+
+[sub_resource type="Animation" id="Animation_vvdhi"]
+length = 0.001
+tracks/0/type = "rotation_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Armature/Skeleton3D:Bone")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, -1.2887436e-08, -4.268364e-08, -0.25780466, 0.9661971)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Armature/Skeleton3D:Bone.001")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, -6.528312e-09, 6.1060746e-08, -0.24147429, 0.97040725)
+tracks/2/type = "rotation_3d"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Armature/Skeleton3D:Bone.010")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, -0.68922603, -0.0019045062, -0.0019045161, 0.72454137)
+tracks/3/type = "rotation_3d"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Armature/Skeleton3D:Bone.012")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = PackedFloat32Array(0, 1, -0.65875643, 0.064967096, 0.12442034, 0.73914737)
+tracks/4/type = "rotation_3d"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Armature/Skeleton3D:Bone.014")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = PackedFloat32Array(0, 1, -0.051643547, -0.061692677, -0.16154338, 0.9835805)
+tracks/5/type = "rotation_3d"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Armature/Skeleton3D:Bone.019")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = PackedFloat32Array(0, 1, 0.016458252, -0.019293884, -0.1399808, 0.9898294)
+tracks/6/type = "rotation_3d"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Armature/Skeleton3D:Bone.020")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = PackedFloat32Array(0, 1, 0.015033803, -4.0786405e-09, -0.0016215006, 0.9998857)
+tracks/7/type = "rotation_3d"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Armature/Skeleton3D:Bone.011")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = PackedFloat32Array(0, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987)
+tracks/8/type = "rotation_3d"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Armature/Skeleton3D:Bone.013")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = PackedFloat32Array(0, 1, 0.63668185, -4.850241e-09, 0.06867026, 0.7680629)
+tracks/9/type = "rotation_3d"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Armature/Skeleton3D:Bone.015")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = PackedFloat32Array(0, 1, 0.14163214, 0.15023436, -0.3065143, 0.9292034)
+tracks/10/type = "rotation_3d"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Armature/Skeleton3D:Bone.018")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = PackedFloat32Array(0, 1, 0.009747677, 0.020365573, -0.16404052, 0.9861952)
+tracks/11/type = "rotation_3d"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Armature/Skeleton3D:Bone.021")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = PackedFloat32Array(0, 1, -0.025812145, -2.1908015e-09, -0.0027840089, 0.99966294)
+tracks/12/type = "rotation_3d"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Armature/Skeleton3D:Bone.016")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = PackedFloat32Array(0, 1, 7.35516e-09, 1.019139e-07, -0.053695004, 0.9985574)
+tracks/13/type = "rotation_3d"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Armature/Skeleton3D:Bone.017")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = PackedFloat32Array(0, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866)
+tracks/14/type = "rotation_3d"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Armature/Skeleton3D:Bone.002")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = PackedFloat32Array(0, 1, 5.051398e-09, 4.4253742e-08, 0.11499699, 0.9933658)
+tracks/15/type = "rotation_3d"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Armature/Skeleton3D:Bone.004")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = PackedFloat32Array(0, 1, 1.652257e-08, 6.605542e-08, -0.684459, 0.72905135)
+tracks/16/type = "rotation_3d"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Armature/Skeleton3D:Bone.005")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = PackedFloat32Array(0, 1, 0.0057469886, -0.008309987, -0.77499694, 0.6318843)
+tracks/17/type = "rotation_3d"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Armature/Skeleton3D:Bone.008")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = PackedFloat32Array(0, 1, 0.005848111, 0.0041798693, 0.8864228, 0.4628207)
+tracks/18/type = "rotation_3d"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Armature/Skeleton3D:Bone.006")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = PackedFloat32Array(0, 1, -1.3068555e-08, -1.1368775e-08, 0.9777707, -0.20967707)
+tracks/19/type = "rotation_3d"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Armature/Skeleton3D:Bone.007")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = PackedFloat32Array(0, 1, 0.0025202816, -0.0022665563, -0.680525, 0.732717)
+tracks/20/type = "rotation_3d"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Armature/Skeleton3D:Bone.009")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = PackedFloat32Array(0, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993)
+
+[sub_resource type="Animation" id="Animation_pge6c"]
+resource_name = "Slide"
+length = 1.5
+tracks/0/type = "rotation_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Armature/Skeleton3D:Bone")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, -1.2887437e-08, -4.2683645e-08, -0.25780466, 0.96619713, 0.17, 1, -1.2887435e-08, -4.2683645e-08, -0.25780463, 0.9661971, 1.5, 1, -1.2887435e-08, -4.268365e-08, -0.25780463, 0.96619713)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Armature/Skeleton3D:Bone.001")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, -6.528312e-09, 6.1060746e-08, -0.2414743, 0.9704073, 0.17, 1, -1.3710837e-08, 5.504736e-08, -0.50828356, 0.8611898, 1.5, 1, -1.371084e-08, 5.5047355e-08, -0.50828356, 0.8611897)
+tracks/2/type = "rotation_3d"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Armature/Skeleton3D:Bone.010")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, -0.68922603, -0.0019045062, -0.0019045161, 0.72454137, 0.17, 1, -0.68922603, -0.0019045062, -0.0019045161, 0.72454137, 1.5, 1, -0.68922603, -0.0019045062, -0.0019045161, 0.72454137)
+tracks/3/type = "rotation_3d"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Armature/Skeleton3D:Bone.012")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = PackedFloat32Array(0, 1, -0.6587564, 0.06496709, 0.12442034, 0.73914737, 0.17, 1, -0.6587564, 0.06496709, 0.12442035, 0.7391474, 1.5, 1, -0.6587564, 0.06496709, 0.12442037, 0.7391475)
+tracks/4/type = "rotation_3d"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Armature/Skeleton3D:Bone.014")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = PackedFloat32Array(0, 1, -0.051643547, -0.061692685, -0.1615434, 0.98358065, 0.17, 1, -0.051643543, -0.061692685, -0.16154338, 0.9835805, 1.5, 1, -0.051643547, -0.0616927, -0.1615434, 0.98358065)
+tracks/5/type = "rotation_3d"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Armature/Skeleton3D:Bone.019")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = PackedFloat32Array(0, 1, 0.016458252, -0.019293886, -0.13998082, 0.9898295, 0.17, 1, 0.01645825, -0.019293884, -0.13998084, 0.9898294, 1.5, 1, 0.01645825, -0.019293886, -0.13998085, 0.9898295)
+tracks/6/type = "rotation_3d"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Armature/Skeleton3D:Bone.020")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = PackedFloat32Array(0, 1, 0.015033803, -4.0786405e-09, -0.0016215006, 0.9998857, 0.17, 1, 0.015033803, -4.0786405e-09, -0.0016215006, 0.9998857, 1.5, 1, 0.015033803, -4.0786405e-09, -0.0016215006, 0.9998857)
+tracks/7/type = "rotation_3d"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Armature/Skeleton3D:Bone.011")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = PackedFloat32Array(0, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 0.17, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987, 1.5, 1, 0.68790114, 0.0020435958, -0.002043892, 0.7257987)
+tracks/8/type = "rotation_3d"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Armature/Skeleton3D:Bone.013")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = PackedFloat32Array(0, 1, 0.6366819, -4.6566133e-09, 0.06867027, 0.76806295, 0.17, 1, 0.6366819, -4.1909516e-09, 0.06867028, 0.7680629, 1.5, 1, 0.6366819, -3.7252903e-09, 0.06867029, 0.76806283)
+tracks/9/type = "rotation_3d"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Armature/Skeleton3D:Bone.015")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = PackedFloat32Array(0, 1, 0.14163214, 0.15023434, -0.30651426, 0.9292034, 0.17, 1, 0.14163214, 0.15023433, -0.30651423, 0.9292034, 1.5, 1, 0.14163215, 0.15023433, -0.30651423, 0.9292035)
+tracks/10/type = "rotation_3d"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Armature/Skeleton3D:Bone.018")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = PackedFloat32Array(0, 1, 0.0097476775, 0.020365573, -0.16404052, 0.98619527, 0.17, 1, 0.00974768, 0.020365572, -0.1640405, 0.9861952, 1.5, 1, 0.009747681, 0.020365572, -0.1640405, 0.98619527)
+tracks/11/type = "rotation_3d"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Armature/Skeleton3D:Bone.021")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = PackedFloat32Array(0, 1, -0.025812145, -2.1908015e-09, -0.0027840089, 0.99966294, 0.17, 1, -0.025812145, -2.1908015e-09, -0.0027840089, 0.99966294, 1.5, 1, -0.025812145, -2.1908015e-09, -0.0027840089, 0.99966294)
+tracks/12/type = "rotation_3d"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Armature/Skeleton3D:Bone.016")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = PackedFloat32Array(0, 1, 7.35516e-09, 1.019139e-07, -0.053695004, 0.9985574, 0.17, 1, 7.35516e-09, 1.019139e-07, -0.053695004, 0.9985574, 1.5, 1, 7.35516e-09, 1.019139e-07, -0.053695004, 0.9985574)
+tracks/13/type = "rotation_3d"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Armature/Skeleton3D:Bone.017")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = PackedFloat32Array(0, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 0.17, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866, 1.5, 1, -8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866)
+tracks/14/type = "rotation_3d"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Armature/Skeleton3D:Bone.002")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = PackedFloat32Array(0, 1, 5.051398e-09, 4.4253742e-08, 0.114997, 0.9933659, 0.17, 1, 5.051398e-09, 4.4253746e-08, 0.11499701, 0.99336594, 1.5, 1, 5.051397e-09, 4.4253742e-08, 0.11499699, 0.9933658)
+tracks/15/type = "rotation_3d"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Armature/Skeleton3D:Bone.004")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = PackedFloat32Array(0, 1, -1.6522572e-08, -6.605542e-08, 0.68445903, -0.72905135, 0.17, 1, -1.6522572e-08, -6.6055414e-08, 0.68445903, -0.72905135, 1.5, 1, -1.652257e-08, -6.605541e-08, 0.68445903, -0.72905135)
+tracks/16/type = "rotation_3d"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Armature/Skeleton3D:Bone.005")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = PackedFloat32Array(0, 1, 0.005746989, -0.008309987, -0.77499694, 0.6318843, 0.17, 1, -0.0010398382, 0.010049981, 0.983421, -0.18105528, 1.5, 1, 0.0010398382, -0.010049983, -0.9834211, 0.18105528)
+tracks/17/type = "rotation_3d"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Armature/Skeleton3D:Bone.008")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = PackedFloat32Array(0, 1, 0.0058481107, 0.0041798693, 0.88642275, 0.46282065, 0.17, 1, 0.005848111, 0.00417987, 0.8864228, 0.46282068, 1.5, 1, 0.0058481107, 0.0041798702, 0.88642275, 0.46282065)
+tracks/18/type = "rotation_3d"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Armature/Skeleton3D:Bone.006")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = PackedFloat32Array(0, 1, -1.3068557e-08, -1.1368777e-08, 0.97777075, -0.20967709, 0.17, 1, 1.6542312e-08, 7.181728e-08, -0.6246076, 0.78093874, 1.5, 1, -1.6542312e-08, -7.181728e-08, 0.6246077, -0.7809388)
+tracks/19/type = "rotation_3d"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Armature/Skeleton3D:Bone.007")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = PackedFloat32Array(0, 1, 0.0025202816, -0.002266556, -0.680525, 0.732717, 0.17, 1, -0.0005785852, 0.0033397905, 0.98793215, -0.15485047, 1.5, 1, 0.00057858514, -0.0033397898, -0.98793215, 0.15485048)
+tracks/20/type = "rotation_3d"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Armature/Skeleton3D:Bone.009")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = PackedFloat32Array(0, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 0.17, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.59099925, 1.5, 1, 0.000699215, 0.00068989355, 0.80667156, 0.5909993)
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_aagt3"]
+_data = {
+&"Idle": SubResource("Animation_k2uew"),
+&"Jumping": SubResource("Animation_27p27"),
+&"RESET": SubResource("Animation_vvdhi"),
+&"Slide": SubResource("Animation_pge6c")
+}
+
+[node name="Main Character Placeholder" unique_id=1036910471 instance=ExtResource("1_27p27")]
+script = ExtResource("2_k2uew")
+
+[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(2144681493) index="0" unique_id=43268377]
+bones/0/rotation = Quaternion(-1.2887437e-08, -4.2683645e-08, -0.25780466, 0.96619713)
+bones/0/scale = Vector3(1, 1, 0.9999999)
+bones/1/rotation = Quaternion(-6.528312e-09, 6.1060746e-08, -0.2414743, 0.9704073)
+bones/3/rotation = Quaternion(-0.6587564, 0.06496709, 0.12442034, 0.73914737)
+bones/3/scale = Vector3(0.99999994, 1, 1.0000001)
+bones/4/rotation = Quaternion(-0.051643547, -0.061692685, -0.1615434, 0.98358065)
+bones/4/scale = Vector3(0.99999964, 1.0000001, 0.9999998)
+bones/5/rotation = Quaternion(0.016458252, -0.019293886, -0.13998082, 0.9898295)
+bones/5/scale = Vector3(1, 1.0000001, 1.0000005)
+bones/6/scale = Vector3(1, 1.0000004, 1.0000001)
+bones/8/rotation = Quaternion(0.6366819, -4.6566133e-09, 0.06867027, 0.76806295)
+bones/8/scale = Vector3(1, 1.0000001, 1.0000005)
+bones/9/rotation = Quaternion(0.14163214, 0.15023434, -0.30651426, 0.9292034)
+bones/9/scale = Vector3(1.0000002, 0.9999999, 1.0000002)
+bones/10/rotation = Quaternion(0.0097476775, 0.020365573, -0.16404052, 0.98619527)
+bones/10/scale = Vector3(0.99999946, 1, 0.99999964)
+bones/13/rotation = Quaternion(-8.4856836e-08, -1.0533697e-09, 0.35494667, 0.9348866)
+bones/13/scale = Vector3(0.99999994, 0.99999994, 0.9999999)
+bones/14/rotation = Quaternion(5.051398e-09, 4.4253742e-08, 0.114997, 0.9933659)
+bones/15/rotation = Quaternion(-1.6522572e-08, -6.605542e-08, 0.68445903, -0.72905135)
+bones/15/scale = Vector3(0.99999857, 0.99999976, 0.99999976)
+bones/16/rotation = Quaternion(0.005746989, -0.008309987, -0.77499694, 0.6318843)
+bones/16/scale = Vector3(1.000001, 0.99999934, 1.0000002)
+bones/17/rotation = Quaternion(0.0058481107, 0.0041798693, 0.88642275, 0.46282065)
+bones/17/scale = Vector3(1.0000013, 0.999999, 0.9999999)
+bones/18/rotation = Quaternion(-1.3068557e-08, -1.1368777e-08, 0.97777075, -0.20967709)
+bones/18/scale = Vector3(0.99999774, 0.99999964, 1.0000002)
+bones/19/position = Vector3(3.193774e-08, 5.237463, -1.3750686e-08)
+bones/19/rotation = Quaternion(0.0025202816, -0.002266556, -0.680525, 0.732717)
+bones/19/scale = Vector3(1.0000044, 0.9999962, 1.0000012)
+bones/20/rotation = Quaternion(0.0006992149, 0.00068989355, 0.80667156, 0.5909993)
+bones/20/scale = Vector3(1.0000012, 0.9999989, 0.9999999)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." index="1" unique_id=613711949]
+libraries/ = SubResource("AnimationLibrary_aagt3")
+
+
+
+=== FILE: res://Player/model.gd ===
+extends Node3D
+
+
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
+
+func play_anim(Anim_Name):
+	animation_player.play(Anim_Name)
+
+
+
+=== FILE: res://Player/player.gd ===
+extends Node3D
+class_name Player
+
+signal sliding # A signal for when sliding
+signal dashing # A signal for when dashing
+
+# Nodes of note
+@onready var camera: Camera3D = $Body/Camera3D # The camera
+@onready var score_label: Label = $Body/UI/ScoreLabel # The label which shows the score
+@onready var row_squares: Node2D = $Body/UI/Row_Squares # The parent node of the row indicators
+@onready var body: CharacterBody3D = $Body # The body of the player
+@onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator" # An inidicator for when invincible
+@onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
+@onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
+@onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
+@onready var timer: Timer = $Timer
+@onready var model: Node3D = $"Body/Main Character Placeholder"
+@export var power_node: Node # The node that controls the power of the skateboard
+@export var Wall_Detection: Node3D # The script that detects when walls are hit
+
+# Constants
+const MIN_ROW_INDEX: int = -2 # The minimum row
+const MAX_ROW_INDEX: int = 2 # The maximum row
+const JUMP_VELOCITY: float = 7.0 # The velocity of the jump
+const GRAVITY: float = 12.0 # The strength of gravity
+const STRAFE_SPEED: float = 15.0  # The speed of strafing
+const DASH_DRAIN_RATE: float = 10.0 # The rate at which the dash speed drains back to normal
+const dash_multiplier: float = 2.0 # The multiplier to the speed when dashing
+
+# Regular variables
+var current_speed: float = 15.0 # The speed of movement
+var row_index: int = 0 # The current row
+var current_row_offset: float = 0.0 # The offset of the current row
+var score: int = 0 # The current score
+var is_sliding: bool = false # A bool to show if you are currently sliding
+var is_dashing: bool = false # A bool to show if you are starting dashing
+var starting_run: bool = true # A bool to show if the run is starting
+var hit_wall: bool = false
+
+## Runs when the scene is instanced or loaded in
+func _ready() -> void:
+	
+	# Apply the power node's signals signals
+	connect_signals()
+	
+	# set the invincibility indicator
+	invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
+	
+	# Capture the mouse
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+## Runs on input of any kind
+func _input(event: InputEvent) -> void:
+	
+	# If the player clicks, set the mouse to capture
+	if event.is_action_pressed("Click"): Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
+	# If A is pressed, move left
+	if event.is_action_pressed("A"): move_left()
+	
+	# If D is pressed, move right
+	if event.is_action_pressed("D"): move_right()
+	
+	# If Shift is pressed and the player is not currently sliding and the player is on the floor, begin slide
+	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): 
+		slide()
+	
+	# If W is pressed and the current power is greater than or equal to the cost
+	if event.is_action_pressed("W"):
+		if power_node.current_power >= power_node.dash_cost:
+			
+			# Set dashing to true and emit the dashing signal
+			is_dashing = true
+			dashing.emit()
+	
+	# If ESC is pressed, set mouse to visible
+	if event.is_action_pressed("ESC"): Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+## Moves the active row to the left one
+func move_left() -> void:
+	
+	# If row is above the minimum, lower row
+	if row_index > MIN_ROW_INDEX:
+		row_index -= 1
+		
+		# Update the target row location
+		update_target_row()
+
+## Moves the active row to the right one
+func move_right() -> void:
+	
+	# If row is less than the max, increase row
+	if row_index < MAX_ROW_INDEX:
+		row_index += 1
+		
+		# Update the target row location
+		update_target_row()
+
+## Function to update the target row
+## Set current row location to the location of the current row1
+func update_target_row() -> void: current_row_offset = int(row_index) * 3
+
+## Runs 60 times a second
+func _physics_process(delta: float) -> void:
+	if not animation_player.is_playing():
+		model.play_anim("Idle")
+	# Set the power meter to reflect the current power
+	power_meter.value = power_node.current_power
+	
+	# Update text to reflect current speed and score
+	speed_label.text = ("SPEED(MPS): " + str(int(current_speed)))
+	score_label.text = ("SCORE: " + str(DatabaseManager.display_score()))
+	
+	# Update the row squares
+	update_row_square()
+	
+	# Set sideways movement to 0
+	body.velocity.x = 0.0
+	
+	# If you are dashing, set the velocity to current speed of the power, 
+	# times the dash multiplier and set is dashing to false
+	if is_dashing:
+		body.velocity.z = -power_node.current_speed * dash_multiplier
+		is_dashing = false
+	
+	# Otherwise if you are starting the run, set the initial velocity and note that it was set up
+	elif starting_run:
+		body.velocity.z = -power_node.current_speed
+		starting_run = false
+	
+	# If neither are true, change the speed towards the current speed in power by 10 MPS/s
+	else:
+		body.velocity.z = move_toward(body.velocity.z, -power_node.current_speed, DASH_DRAIN_RATE * delta)
+	
+	# Set the current speed to the forward velocity of the body
+	current_speed = -body.velocity.z
+	
+	# move position of player to the current row and bring rows with body
+	body.global_position.x = move_toward(body.global_position.x, current_row_offset, STRAFE_SPEED * delta)
+	
+	# Runs if space is pressed and you are on the floor
+	if Input.is_action_just_pressed("Space") and body.is_on_floor():
+		
+		# If you are sliding, cancel it
+		if is_sliding:
+			if animation_player.current_animation == "Slide":
+				animation_player.stop()
+				
+			is_sliding = false
+		
+		# Apply jump velocity
+		body.velocity.y += JUMP_VELOCITY
+	
+	# If player is not on floor, apply gravity
+	if not body.is_on_floor():
+		body.velocity.y -= GRAVITY * delta
+	
+	# Move the body according to the set velocities
+	body.move_and_slide()
+
+## Updates the square representing the row you are in
+func update_row_square():
+	
+	# For loop for children nodes of the row squares parent node
+	for child in row_squares.get_children():
+		
+		# Get the number of the row by increasing the index by 3
+		var row_num = row_index + 3
+		
+		# If the name matches the row you are in, then make the square white
+		if child.name == ("Row" + str(row_num)):
+			child.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		
+		# Otherwise, make it black
+		else: child.modulate = Color(0.0, 0.0, 0.0, 1.0)
+
+## Connects the necessary signals to their respective methods
+func connect_signals():
+	power_node.invincibility_changed.connect(_on_power_invincibility_changed)
+	power_node.game_over_triggered.connect(lose)
+	Wall_Detection.Wall_Hit.connect(hit)
+
+## Changes the color of the Invincibility UI
+func _on_power_invincibility_changed(is_invincible: bool) -> void:
+	
+	# if player is invincible, make it yellow, showing it is active 
+	if is_invincible: invincible_indicator.modulate = Color(0.843, 0.733, 0.0, 0.573)
+	
+	# Otherwise, make it translucent black
+	else: invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
+
+## Runs on losing the game
+## As of right now only prints a message that the player lost
+func lose():
+	print("YOU LOST")
+	# Just an option, you could instead of creating a timer node, do "await get_tree().create_timer(3).timeout" then the next thing in the line after
+	timer.start()
+
+## Begins the sliding state
+func slide():
+	model.animation_player.stop()
+	# Emit the sliding signal and set that the player is sliding
+	sliding.emit()
+	is_sliding = true
+	
+	# Play the animation and wait for it to finish
+	animation_player.play("Slide")
+	model.play_anim("Slide")
+	await animation_player.animation_finished
+	
+	# Set sliding to false
+	is_sliding = false
+
+## Runs the hit wall animation upon being called
+func hit(): 
+	animation_player.stop()
+	animation_player.play("Hit_Wall")
+
+func _on_timer_timeout() -> void:
+	get_tree().reload_current_scene()
+
+func play_body_anim(Anim_Name):
+	model.play_anim(Anim_Name)
+
+
+
+=== FILE: res://Player/player.tscn ===
+[gd_scene format=3 uid="uid://bohcd45ewcaui"]
+
+[ext_resource type="Script" uid="uid://bpvo8cgevcra4" path="res://Player/player.gd" id="1_l8h54"]
+[ext_resource type="PackedScene" uid="uid://cxjb600ea3tbt" path="res://Player/Model + anims.tscn" id="2_4ntmi"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r8tgl"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_jp6wc"]
+radius = 9.545
+height = 19.09
+
+[sub_resource type="Animation" id="Animation_btcbx"]
+resource_name = "Hit_Wall"
+length = 1.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.16666667, 0.5, 0.6666667, 0.99, 1.1666666),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [false, true, false, true, false, true]
+}
+
+[sub_resource type="Animation" id="Animation_l8h54"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CollisionShape3D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("CollisionShape3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath(".:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+
+[sub_resource type="Animation" id="Animation_4ntmi"]
+resource_name = "Slide"
+length = 1.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CollisionShape3D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.06666667, 0.13333334, 0.19999999, 1.0333333, 1.1533334, 1.2833333, 1.4733334),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, -0.08226073, 0), Vector3(0, -0.5045166, 0), Vector3(0, -0.5446608, 0), Vector3(0, -0.5446608, 0), Vector3(0, -0.5045166, 0), Vector3(0, -0.08226073, 0), Vector3(0, 0, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("CollisionShape3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.06666667, 0.13333334, 0.19999999, 1.0333333, 1.1533334, 1.2750001, 1.4733334),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0.5235988, 0, 0), Vector3(1.0471976, 0, 0), Vector3(1.5707964, 0, 0), Vector3(1.5707964, 0, 0), Vector3(1.0471976, 0, 0), Vector3(0.5235988, 0, 0), Vector3(0, 0, 0)]
+}
+tracks/2/type = "method"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("..")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(),
+"transitions": PackedFloat32Array(),
+"values": []
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_btcbx"]
+_data = {
+&"Hit_Wall": SubResource("Animation_btcbx"),
+&"RESET": SubResource("Animation_l8h54"),
+&"Slide": SubResource("Animation_4ntmi")
+}
+
+[node name="Player" type="Node3D" unique_id=196411886 groups=["Player"]]
+script = ExtResource("1_l8h54")
+
+[node name="Body" type="CharacterBody3D" parent="." unique_id=607464147 groups=["Player"]]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Body" unique_id=1107740713]
+shape = SubResource("CapsuleShape3D_r8tgl")
+
+[node name="Main Character Placeholder" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
+transform = Transform3D(-4.371139e-09, 0, 0.1, 0, 0.1, 0, -0.1, 0, -4.371139e-09, 0, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Body" unique_id=1996423927]
+transform = Transform3D(1, 0, 0, 0, 0.8660254, 0.50000006, 0, -0.50000006, 0.8660254, 0, 6, 5)
+
+[node name="UI" type="Node2D" parent="Body" unique_id=48081940]
+
+[node name="ScoreLabel" type="Label" parent="Body/UI" unique_id=38436912]
+offset_left = 15.0
+offset_top = 17.0
+offset_right = 85.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 30
+text = "DISTANCE: X"
+metadata/_edit_use_anchors_ = true
+
+[node name="SpeedLabel" type="Label" parent="Body/UI" unique_id=863442090]
+offset_left = 15.0
+offset_top = 59.0
+offset_right = 229.0
+offset_bottom = 101.0
+theme_override_font_sizes/font_size = 30
+text = "SPEED (MPS): X"
+metadata/_edit_use_anchors_ = true
+
+[node name="Power Meter" type="ProgressBar" parent="Body/UI" unique_id=267632114]
+offset_left = 391.0
+offset_top = 59.0
+offset_right = 712.0
+offset_bottom = 86.0
+show_percentage = false
+
+[node name="Row_Squares" type="Node2D" parent="Body/UI" unique_id=893208432]
+
+[node name="Row1" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1916899024]
+modulate = Color(0, 0, 0, 1)
+position = Vector2(448, 32)
+scale = Vector2(40.5, 41.5)
+mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="Row2" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1579182820]
+modulate = Color(0, 0, 0, 1)
+position = Vector2(501, 32)
+scale = Vector2(40.5, 41.5)
+mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="Row3" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=210266865]
+modulate = Color(0, 0, 0, 1)
+position = Vector2(551.99994, 32)
+scale = Vector2(40.5, 41.5)
+mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="Row4" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=833332831]
+modulate = Color(0, 0, 0, 1)
+position = Vector2(604, 32)
+scale = Vector2(40.5, 41.5)
+mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="Row5" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1275927668]
+modulate = Color(0, 0, 0, 1)
+position = Vector2(655, 32)
+scale = Vector2(40.5, 41.5)
+mesh = SubResource("BoxMesh_jp6wc")
+
+[node name="Invincible indicator" type="MeshInstance2D" parent="Body/UI" unique_id=42956622]
+position = Vector2(1059, 86)
+scale = Vector2(5.1177316, 4.9190683)
+mesh = SubResource("CapsuleMesh_jp6wc")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Body" unique_id=1048757398]
+libraries/ = SubResource("AnimationLibrary_btcbx")
+
+[node name="Timer" type="Timer" parent="." unique_id=241735877]
+wait_time = 3.0
+one_shot = true
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
+
+
+
+=== FILE: res://power.gd ===
+extends Node
+
+## Notifies UI to continuously update the power meter
+signal power_changed(current_power: float, max_power: float)
+## Notifies UI when invincibility state changes
+signal invincibility_changed(is_invincible: bool)
+## Notifies UI to display the game over screen
+signal game_over_triggered
+
+@export_category("Run Configuration")
+@export var max_power: float = 100.0 # Max fuel capacity
+@export var power_drain_rate: float = 5.0 # Power lost per second
+@export var base_speed: float = 15.0 # Starting movement speed in m/s
+@export var speed_acceleration: float = 0.25 # Adds 15 m/s every 60 seconds
+@export var coasting_deceleration: float = 5.0 # Speed lost per second while coasting
+@export var crystal_invincibility_duration: float = 3.0 # Duration of invincibility/catch-up acceleration
+@export var slide_cost: int = 10
+@export var dash_cost: int = 25
+@export var player: Player
+
+# Live tracking variables
+var current_power: float = 100.0
+var current_speed: float = 15.0
+var target_speed: float = 15.0 # Calculated speed ceiling based on distance
+var distance_traveled: float = 0.0 # Tracks live distance in meters
+var is_run_active: bool = false
+var is_coasting: bool = false
+var is_invincible: bool = false
+var invincibility_timer: float = 0.0
+
+## Resets runtime stats and starts a new run
+func start_run() -> void:
+	current_power = max_power
+	current_speed = base_speed
+	target_speed = base_speed
+	distance_traveled = 0.0
+	is_run_active = true
+	is_coasting = false
+	is_invincible = false
+	invincibility_timer = 0.0
+	power_changed.emit(current_power, max_power)
+	player.sliding.connect(slide)
+	player.dashing.connect(dash)
+
+## Performs acceleration, deceleration, and power drain calculations
+func _process(delta: float) -> void:
+	if not is_run_active:
+		return
+		
+	var was_invincible_this_frame: bool = is_invincible
+	
+	# 1. Update invincibility timer
+	if is_invincible:
+		invincibility_timer -= delta
+		if invincibility_timer <= 0.0:
+			is_invincible = false
+			invincibility_timer = 0.0
+			invincibility_changed.emit(false)
+	
+	# 2. Track distance traveled each frame
+	var meters_moved: float = current_speed * delta
+	distance_traveled += meters_moved
+	
+	if get_node_or_null("/root/DatabaseManager"):
+		DatabaseManager.add_distance(meters_moved)
+	
+	# 3. Increase target speed steadily based on total distance traveled
+	# Standard physics motion equation (v = sqrt(v0^2 + 2ad))
+	# Scales speed based on distance traveled so gameplay ramps up quickly, but prevents speed from exponentially increasing
+	target_speed = sqrt((base_speed * base_speed) + (2.0 * speed_acceleration * distance_traveled))
+	
+	if is_coasting:
+		# 4. Coasting State: Decelerate continuously to 0 m/s
+		current_speed = maxf(0.0, current_speed - (coasting_deceleration * delta))
+		if current_speed <= 0.0 and player.current_speed <= 0.0:
+			end_run()
+			
+	else:
+		# 5. Drains power continuously when not invincible
+		if not was_invincible_this_frame:
+			current_power = maxf(0.0, current_power - (power_drain_rate * delta))
+			power_changed.emit(current_power, max_power)
+			if current_power <= 0.0:
+				is_coasting = true
+		
+		# 6. Catch-up acceleration logic when current speed is below target speed
+		if current_speed < target_speed:
+			# Dynamically calculates exact acceleration needed so current_speed reaches target_speed simultaneously as invincibility_timer reaches 0.0s.
+			if is_invincible and invincibility_timer > 0.0:
+				var speed_gap: float = target_speed - current_speed
+				var required_acceleration: float = speed_gap / maxf(invincibility_timer, delta)
+				current_speed = minf(target_speed, current_speed + (required_acceleration * delta))
+			else:
+				var fallback_acceleration: float = maxf(1.0, speed_acceleration) * 10.0
+				current_speed = minf(target_speed, current_speed + (fallback_acceleration * delta))
+				
+		else:
+			current_speed = target_speed
+			if is_invincible:
+				is_invincible = false
+				invincibility_timer = 0.0
+				invincibility_changed.emit(false)
+
+## Restores power to full and triggers invincibility if player is recovering speed
+func collect_crystal() -> void:
+	if not is_run_active:
+		return
+	
+	current_power = max_power
+	is_coasting = false
+	
+	# Invinsibility acts as recovery grace period, but is skipped if already at target speed
+	if current_speed < target_speed:
+		is_invincible = true
+		invincibility_timer = crystal_invincibility_duration
+		invincibility_changed.emit(true)
+	else:
+		is_invincible = false
+		invincibility_timer = 0.0
+
+## Handles logic for the player hitting an obstacle
+func obstacle_hit(damage: float = 25.0) -> void:
+	if not is_run_active:
+		return
+	if is_invincible:
+		return
+	if is_coasting:
+		end_run()
+		return
+	
+	is_invincible = true
+	invincibility_timer = 1.5
+	invincibility_changed.emit(true)
+	current_power = maxf(0.0, current_power - damage)
+	power_changed.emit(current_power, max_power)
+	
+	if current_power <= 0.0:
+		is_coasting = true
+
+## Stops gameplay processing and triggers game over
+func end_run() -> void:
+	is_run_active = false
+	is_coasting = false
+	is_invincible = false
+	current_speed = 0.0
+	game_over_triggered.emit()
+
+func slide():
+	current_power = clamp(current_power - slide_cost, 0.0, max_power)
+
+func dash():
+	current_power = clamp(current_power - dash_cost, 0.0, max_power)
+
+
+
+=== FILE: res://ProceduralGenerator.gd ===
+extends Node3D
+
+signal Wall_Hit # A signal for when a wall is hit
+
+# ------- Scenes to be loaded -------
+
+# Road scenes
+const STREET_TEMPLATE1 = preload("res://Streets/street_template.tscn") # Road 1 Scene
+
+# Side thing scenes
+const BUILDING1 = preload("res://Streets/Building.tscn") # Building 1 Scene
+
+# Obstacle scenes
+const JUMP_OBSTACLE = preload("res://Obstacles/Testing_Beam.tscn") # An obstacle to jump over
+const WALL = preload("res://Obstacles/Wall.tscn") # A wall you cannot jump over
+const SLIDE_BEAM = preload("res://Obstacles/Sliding_Beam.tscn") # A beam you must slide under
+
+# ------- VARIABLES -------
+
+# Constants
+const DIST_BETWEEN_SIDE_OBJECTS: int = 30 # Distance between the things on the side
+const MIN_LOCAL_DIST: int = 60 # The minimum local z point where things on the side can spawn
+const MAX_LOCAL_DIST: int = 300 # The maximum local z point where things on the side can spawn
+const DIST_TO_SIDE: float = 9.5 # The distance to the side of the road from the middle
+const LEFT_ANGLE: float = 90.0  # The left side's angle to put the things on the side at
+const RIGHT_ANGLE: float = -90.0 # The right side's angle to put the things on the side at
+
+# Arrays to choose from for spawning
+var roads_to_spawn: Array = [STREET_TEMPLATE1] # Possible roads to spawn
+var side_to_spawn: Array = [BUILDING1] # Possible things to spawn on the sides
+var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obstacles to spawn
+
+# Nodes
+@onready var starting_street: street = $Roads/StreetTemplate # The starting street
+@onready var in_road: Node3D = $In_Road # The parent node of all things in the road
+@onready var roads: Node3D = $Roads # The node all roads are under
+@onready var power: Node = $Power # The power controller
+@onready var row_detector: Area3D = $Row_Detector # The thing that detects if you passed the row
+@onready var obstacles: Node3D = $Obstacles # The parent node of the obstacles
+@export var crystal_spawner: Node3D # The spawner of crystals
+@export var player: Player # The player
+
+# Exported variables
+@export var obstacle_min_reaction_time: float = 0.5 # The minimum reaction time for obstacles
+@export var obstacle_max_reaction_time: float = 1.0 # The maximum reaction time for obstacles
+@export var obstacle_speed_difference: float = 5.0 # The difference in speed between the crystal spawner and the obstacle spawner
+@export var percentage_obstacle_spawned: int = 50 # the percentage change for each obstacle to be spawned
+
+# Variables
+var current_road_count: int = 1 # The current amount of roads currently existing
+var set_up: bool = false # A variable for if the rows have been set up
+var road_1: street # The road the player is on
+var road_2: street # The next road to be entered
+var road_3: street # The road to be loaded upon entering next road
+var row_count: int = 0 # The amount of rows currently in the game
+var rows_passed: int = 0 # The amount of rows the player has passed
+var current_rows: Array = [] # The current rows in existance
+var row_to_free # The row that will be freed when you pass a row
+
+# ------- METHODS -------
+
+## Connects the starting street signal to the method.
+## Runs on startup
+func _ready() -> void:
+	
+	# Set road 1 to starting street
+	road_1 = starting_street
+	
+	# Connect the entered signal as a one shot
+	starting_street.entered.connect(enter, CONNECT_ONE_SHOT)
+	
+	# Start the run in the power controller 
+	power.start_run()
+	
+	# while there is less than 15 rows, summon a row of obstacles
+	while current_rows.size() < 15:
+		summon_row_obstacles()
+	
+	# Place the Area3D to the closest row before the player
+	place_Area3D(current_rows.front().global_position.z)
+
+
+func _process(_delta: float) -> void:
+	if row_count < 15:
+		summon_row_obstacles()
+
+## Spawns the roads and buildings on the links.
+## Function runs to enter road
+func enter(street_node: street):
+	
+	# Create a variable for the distance of the current object
+	var distance_down_road: int = MIN_LOCAL_DIST
+	
+	# While loop for when the distance down the road is less than 300
+	while distance_down_road < 300:
+		
+		# Summon a side object both for the right and left
+		var current_left_spawn = summon_side(street_node)
+		var current_right_spawn = summon_side(street_node)
+		
+		# Set the position of both current spawns
+		current_left_spawn.position = Vector3(-DIST_TO_SIDE, 0.0, -distance_down_road)
+		current_right_spawn.position = Vector3(DIST_TO_SIDE, 0.0, -distance_down_road)
+		
+		# Set the rotation of both current spawns
+		current_left_spawn.global_rotation.y = deg_to_rad(LEFT_ANGLE)
+		current_right_spawn.global_rotation.y = deg_to_rad(RIGHT_ANGLE)
+		
+		# Add the distance of the object to the distance down road variable
+		distance_down_road += DIST_BETWEEN_SIDE_OBJECTS
+	
+	# Summon a road
+	var current_road_spawn = summon_road()
+	
+	# Set the position of the current road
+	current_road_spawn.global_position = street_node.end_link.global_position
+	
+	# Up the road count
+	current_road_count += 1
+	
+	# Update the road variables based on the current road
+	match street_node:
+		road_1:
+			road_2 = current_road_spawn
+		road_2:
+			road_3 = current_road_spawn
+	
+	# If current road count is 2 and road_2 exists
+	if is_instance_valid(starting_street) and current_road_count < 3:
+		
+		# Run this method for the new road
+		enter(road_2)
+
+## Used to connect the obstacle's signal to the method
+func connect_obstacle(obstacle): obstacle.body_entered.connect(body_entered)
+
+## Runs on body entering.
+## Connects to obstacles which can be hit
+func body_entered(body: Node3D):
+	
+	# If the body is the player
+	if body.is_in_group("Player"):
+		
+		# Run the obstacle hit method in the power controller and emit the signal
+		power.obstacle_hit()
+		Wall_Hit.emit()
+
+## Removes old roads, buildings, and obstacles. 
+## Run to disable the previous area
+func disable(not_disable: street):
+	
+	# For loop for the children of the roads parent node
+	for child in roads.get_children():
+		# If child is not the entered road or the third road,
+		# Get the children of the child node and remove them
+		if child != not_disable and child != road_3:
+			# Remove the child node
+			child.queue_free()
+	
+	# Update the roads
+	road_1 = road_2
+	road_2 = road_3
+	road_3 = null
+	
+	# Up the road count
+	current_road_count -= 1
+	
+	# If the road is valid, then run enter method
+	if is_instance_valid(not_disable) and is_instance_valid(road_2):
+		enter(road_2)
+
+## Summons a row of obstacles
+func summon_row_obstacles():
+	# Create necessary variables
+	var taken_rows: Array = []
+	var wall_spawns: Array = []
+	var wall_count: int = 0
+	var row_z_offset: Vector3
+	
+	# Create a node to reference the row z point
+	var row_reference = Node3D.new()
+	
+	# Up the row count
+	row_count += 1
+	
+	# Update the name to reflect which row it is
+	row_reference.name = "Row" + str(row_count)
+	
+	# Add it as a child of the obstacles parent node
+	obstacles.add_child(row_reference)
+	
+	# For loop for each row index
+	for num in [-2, -1, 0, 1, 2]:
+		
+		# Essencially flip a coin
+		if randi_range(1, 100) <= percentage_obstacle_spawned:
+			
+			# If all five rows are taken, end the method
+			if taken_rows.size() >= 5:
+				return
+			
+			# Create and instance an obstacle of a random type
+			var obstacle = obstacles_to_spawn.pick_random()
+			var obstacle_instance = obstacle.instantiate()
+			
+			# Add it as a child and connect its signal
+			row_reference.add_child(obstacle_instance)
+			connect_obstacle(obstacle_instance)
+			
+			# Select the main row of the possible rows for the obstacle
+			var main_row = obstacle_instance.possible_main_rows.pick_random()
+			
+			# Loop to select a new main row that continues if the row is taken and reselects one
+			var loop_count: int = 0
+			while main_row in taken_rows:
+				if loop_count <= 10:
+					loop_count += 1
+					main_row = obstacle_instance.possible_main_rows.pick_random()
+				else:
+					return
+			
+			# Save the current row being messed with starting with the main row
+			var current_row: int = main_row
+			
+			# Append the row to the taken rows array
+			taken_rows.append(current_row)
+			
+			# If the first row is not set up, find the z offset based on the player's position
+			if not set_up:
+				row_z_offset = place_obstacle(num, player)
+			
+			# If it is set up, get the offset based on the back row
+			else:
+				row_z_offset = place_obstacle(num, current_rows.back())
+			
+			# Place the obstacle in its row
+			
+			obstacle_instance.global_position.x = row_z_offset.x
+			
+			# Detect the number of walls and put it into the wall count variable
+			if detect_walls(obstacle_instance):
+				wall_count += 1
+	
+	# If the wall count is 5 or more, pick a random one and delete it
+	if wall_count >= 5:
+		var to_free = wall_spawns.pick_random()
+		to_free.queue_free()
+	
+	# If the offset is chosen, set the row's position to the offset
+	if row_z_offset:
+		row_reference.global_position = Vector3(0.0, 0.0, row_z_offset.z)
+		
+		# Append it into the current rows and set set_up to be true
+		current_rows.append(row_reference)
+		set_up = true
+
+## Detects if the given obstacle is a wall
+func detect_walls(obstacle: Obstacle):
+	# If you cannot dodge the obstacle, return true
+	if obstacle.dodge_capabilities == "False":
+		return true
+
+## Gets the position based on the basis point and the row index
+func place_obstacle(row_index: int, basis_z):
+	# Get the optimal distance
+	var dist = find_optimal_distance()
+	
+	# Get the z offset
+	var z_offset: float = basis_z.global_position.z - dist
+	
+	# Return the Vector3 with the row index times 3, and the offset
+	return Vector3(row_index * 3, 0.0, z_offset)
+
+
+## Finds the optimal distance for an obstacle
+func find_optimal_distance():
+	# Get the player's speed
+	var clamped_speed = crystal_spawner._get_clamped_speed()
+	
+	# Remap the speed from a range of base speed to max speed to a range of max reaction time to min reaction time
+	var reaction_time = remap(clamped_speed, crystal_spawner.base_speed, crystal_spawner.max_speed, obstacle_max_reaction_time, obstacle_min_reaction_time)
+	
+	# Return the product of the speed and reaction time
+	return clamped_speed * reaction_time
+
+## Summons a road and returns said road to later be put in its place
+func summon_road():
+	
+	# Pick a random road and instance it
+	var road = roads_to_spawn.pick_random()
+	var road_spawn = road.instantiate()
+	
+	# Add it as a child and connect the entered signal
+	roads.add_child(road_spawn)
+	road_spawn.entered.connect(disable)
+	
+	# Return the road to be placed later
+	return road_spawn
+
+
+## Summons something to go on the side of the road, such as buildings
+func summon_side(road: street):
+	
+	# Pick a random thing to spawn and instance it
+	var side = side_to_spawn.pick_random()
+	var side_spawn = side.instantiate()
+	
+	# Add it as a child of the given road
+	road.add_child(side_spawn)
+	
+	# Return the side object to be placed later
+	return side_spawn
+
+## Runs what happens when running into the area3D to detect when the player passes a row
+func _on_row_detector_body_entered(body: Node3D) -> void:
+	# If the body is in the player group
+	if body.is_in_group("Player"):
+		# If the row to free exists, delete it
+		if is_instance_valid(row_to_free):
+			row_to_free.queue_free()
+		
+		# Set row to free to the passed row
+		row_to_free = current_rows.front()
+		
+		# Remove the passed row from current rows
+		current_rows.erase(current_rows.front())
+		
+		
+		# Summon a new row of obstacles
+		summon_row_obstacles()
+		
+		# Place the area3D to the next row
+		place_Area3D(current_rows.front().global_position.z)
+
+## Places the area3D's global_position to the given variable
+func place_Area3D(z_loc: float): row_detector.global_position.z = z_loc
+
+
+
+=== FILE: res://Streets/Building.tscn ===
+[gd_scene format=3 uid="uid://cgotddx0tfuk5"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_i0fns"]
+size = Vector3(20, 41, 85)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mlvgy"]
+size = Vector3(20, 41, 86)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_2jqot"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ixwd2"]
+size = Vector3(2, 31, 87)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tppo5"]
+size = Vector3(2, 31, 87)
+
+[sub_resource type="BoxMesh" id="BoxMesh_fnnny"]
+
+[node name="StreetTemplate" type="StaticBody3D" unique_id=82585562 groups=["Building"]]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=805161773]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, 1, 35.000004, -20.5)
+shape = SubResource("BoxShape3D_i0fns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1200330379]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 1, 35, -20.499998)
+mesh = SubResource("BoxMesh_mlvgy")
+
+[node name="Links" type="Node3D" parent="." unique_id=540514132]
+
+[node name="Start" type="Node3D" parent="Links" unique_id=446746258]
+
+[node name="Area3D" type="Area3D" parent="." unique_id=202494483]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1833507321]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+shape = SubResource("BoxShape3D_2jqot")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="." unique_id=1857972296]
+transform = Transform3D(-4.371139e-08, -1.0000001, 0, 0, 0, -1.0000001, 1, -4.3711392e-08, 0, -2.3841858e-07, 35, -1)
+shape = SubResource("BoxShape3D_ixwd2")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=1993012585]
+transform = Transform3D(-4.371139e-08, -1, 4.371139e-08, 0, -4.371139e-08, -1, 1, -4.371139e-08, 1.9106855e-15, -1.9073486e-06, 35, -1)
+mesh = SubResource("BoxMesh_tppo5")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=166038925]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, 0)
+mesh = SubResource("BoxMesh_fnnny")
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
+
+
+
+=== FILE: res://Streets/street.gd ===
+extends StaticBody3D
+class_name street
+
+# Signal
+signal entered(node_to_keep: street) # The signal that the player entered the road
+
+# Exported vars
+@export var starting_street_node: bool = false # A check for if this is the starting street
+
+# Nodes
+@onready var end_link: Node3D = $EndLink
+@onready var area: Area3D = $Area3D # The area that detects if you entered the road
+@onready var rows: Node3D = $Rows # The parent node of the rows
+
+# Vars
+var collectibles: Array = [] # The array of collectibles
+var has_been_entered: bool = false # A check for if the road has been entered
+var has_summoned_obstacles: bool = false
+
+## Runs upon instancing the scene in a scenetree.
+func _ready() -> void:
+	
+	# if this road is the starting road, set the monitoring to true
+	if starting_street_node:
+		area.monitoring = true
+
+## Gets the link nodes under the link parent node
+func get_links(link: Node3D): return link.get_children()
+
+## Runs on a body entering the area3D
+func _on_area_3d_body_entered(body: Node3D) -> void:
+	
+	# If the body is the player and the area has not been entered before, set that it has now been entered
+	if body.is_in_group("Player") and not has_been_entered:
+		has_been_entered = true
+		
+		# Emit the entered signal
+		entered.emit(self)
+
+## Gets the row nodes under the row parent node
+func get_rows(): return rows.get_children()
+
+func get_specific_row(row_num: int):
+	for child in rows.get_children():
+		if child.name == "Row" + str(row_num):
+			return child
+
+
+
+=== FILE: res://Streets/street_template.tscn ===
+[gd_scene format=3 uid="uid://bfyf2n3db7drf"]
+
+[ext_resource type="Script" uid="uid://dsscn46nl6yb6" path="res://Streets/street.gd" id="1_mlvgy"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_i0fns"]
+size = Vector3(19, 1, 300)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mlvgy"]
+size = Vector3(19, 1, 300)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mlvgy"]
+size = Vector3(11.586792, 45, 85)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tp3hc"]
+size = Vector3(11.449219, 45, 86)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_her67"]
+size = Vector3(19, 15, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_l8h54"]
+size = Vector3(6, 15, 79)
+
+[sub_resource type="BoxMesh" id="BoxMesh_4ntmi"]
+size = Vector3(1, 15, 75)
+
+[node name="StreetTemplate" type="StaticBody3D" unique_id=82585562]
+script = ExtResource("1_mlvgy")
+starting_street_node = null
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=805161773]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -150)
+shape = SubResource("BoxShape3D_i0fns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1200330379]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -150)
+mesh = SubResource("BoxMesh_mlvgy")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="." unique_id=401170717]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, 15.293396, 35, -22.5)
+shape = SubResource("BoxShape3D_mlvgy")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." unique_id=772304924]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 15.224609, 35, -22.5)
+mesh = SubResource("BoxMesh_tp3hc")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="." unique_id=1432207842]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, -15.28691, 35, -22.5)
+shape = SubResource("BoxShape3D_mlvgy")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="." unique_id=483209707]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -15.28691, 35, -22.5)
+mesh = SubResource("BoxMesh_tp3hc")
+
+[node name="EndLink" type="Node3D" parent="." unique_id=1884303052]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -300)
+
+[node name="Area3D" type="Area3D" parent="." unique_id=1731237138]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1015906086]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, -5)
+shape = SubResource("BoxShape3D_her67")
+
+[node name="Node3D" type="Node3D" parent="." unique_id=1059902555]
+
+[node name="SpotLight3D" type="SpotLight3D" parent="Node3D" unique_id=1067629669]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -20.152498)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D2" type="SpotLight3D" parent="Node3D" unique_id=1098307390]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -55.929222)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D3" type="SpotLight3D" parent="Node3D" unique_id=88046551]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -92.92922)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D4" type="SpotLight3D" parent="Node3D" unique_id=585967096]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -128.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D5" type="SpotLight3D" parent="Node3D" unique_id=216031282]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -158.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D6" type="SpotLight3D" parent="Node3D" unique_id=1452533990]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -194.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D7" type="SpotLight3D" parent="Node3D" unique_id=705732289]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -226.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D8" type="SpotLight3D" parent="Node3D" unique_id=1047895365]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -226.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D9" type="SpotLight3D" parent="Node3D" unique_id=1520333517]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -257.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="SpotLight3D10" type="SpotLight3D" parent="Node3D" unique_id=635627887]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 37.714764, -293.92923)
+light_energy = 16.0
+light_indirect_energy = 16.0
+light_volumetric_fog_energy = 0.0
+light_specular = 11.611
+spot_range = 45.15394
+spot_angle = 23.692223
+
+[node name="Rows" type="Node3D" parent="." unique_id=1545715709]
+
+[node name="Row1" type="Node3D" parent="Rows" unique_id=1069395707]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0)
+
+[node name="Row2" type="Node3D" parent="Rows" unique_id=890631907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+
+[node name="Row3" type="Node3D" parent="Rows" unique_id=1823409134]
+
+[node name="Row4" type="Node3D" parent="Rows" unique_id=1972513154]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+
+[node name="Row5" type="Node3D" parent="Rows" unique_id=1692298311]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
+
+[node name="CollisionShape3D4" type="CollisionShape3D" parent="." unique_id=498425959]
+transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, -10, 26.999998, -292.5)
+shape = SubResource("BoxShape3D_l8h54")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="." unique_id=819658988]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -10, 29, -292.5)
+mesh = SubResource("BoxMesh_4ntmi")
+
+[node name="CollisionShape3D5" type="CollisionShape3D" parent="." unique_id=3043476]
+transform = Transform3D(-1, 8.7422784e-08, 0, 0, 0, -1.0000001, -8.742278e-08, -1.0000001, 0, 10, 26.999998, -292.5)
+shape = SubResource("BoxShape3D_l8h54")
+
+[node name="MeshInstance3D5" type="MeshInstance3D" parent="." unique_id=1555923668]
+transform = Transform3D(-1, 8.742278e-08, -3.821371e-15, 0, -4.371139e-08, -1, -8.742278e-08, -1, 4.371139e-08, 10, 29, -292.5)
+mesh = SubResource("BoxMesh_4ntmi")
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
+
+
+
+=== FILE: res://testing_ground.gd ===
+extends Node
+
+func _ready() -> void:
+	
+	# The following line will clear all data from the stats table. Uncomment it to execute when needed
+	# DatabaseManager.db.query("DELETE FROM stats;")
+	
+	print("====================================")
+	print("--- FULL DATABASE MANAGER TEST ---")
+	print("====================================\n")
+	
+	# 1. Check initial lifetime stats on database read
+	print("--- 1. INITIAL LIFETIME STATS ---")
+	print("Lifetime Stats: ", DatabaseManager.lifetime_stats())
+	print("------------------------------------\n")
+	
+	# 2. Simulate Run 1 (Triggers all tracking methods)
+	print("--- 2. SIMULATING RUN #1 ---")
+	DatabaseManager.add_distance(3200.0)         # 3200 meters = 3200 travel points
+	DatabaseManager.add_dodge("jump")            # 1 jump dodge (+10 pts)
+	DatabaseManager.add_dodge("slide")           # 1 slide dodge (+10 pts)
+	DatabaseManager.add_dodge("dash")            # 1 dash dodge (+10 pts)
+	DatabaseManager.add_crystal()                # 1 crystal (+100 pts)
+	DatabaseManager.add_crystal()                # 2 crystals (+100 pts)
+	DatabaseManager.add_gadget()                 # 1 gadget
+	DatabaseManager.player_crash("robot")        # 1 robot crash
+	DatabaseManager.player_crash("scaffolding")  # 1 scaffolding crash
+	DatabaseManager.player_crash("drone")        # 1 drone crash
+	
+	print("Current Calculated Score (Expected 3430): ", DatabaseManager.display_score())
+	
+	# 3. Save Run 1 to SQLite
+	var run1_data: Dictionary = DatabaseManager.save_run()
+	print("Data Saved for Run 1: ", run1_data)
+	
+	# 4. Reset active run stats
+	DatabaseManager.reset_run_stats()
+	print("Score After Reset (Expected 0): ", DatabaseManager.display_score())
+	print("------------------------------------\n")
+	
+	# 5. Verify lifetime stats updated for 1 run
+	print("--- 3. LIFETIME STATS AFTER RUN 1 ---")
+	print("Lifetime Stats: ", DatabaseManager.lifetime_stats())
+	print("------------------------------------\n")
+	
+	# 6. Simulate Run 2 (Tests multi-run aggregation, MAX, and SUM logic)
+	print("--- 4. SIMULATING RUN #2 ---")
+	DatabaseManager.add_distance(6400.0)   # 6400 meters = 6400 travel points
+	DatabaseManager.add_dodge("jump")      # 1 dodge (+10 pts)
+	DatabaseManager.add_crystal()          # 1 crystal (+100 pts)
+	DatabaseManager.add_gadget()           # 1 gadget
+	DatabaseManager.add_gadget()           # 2 gadgets
+	DatabaseManager.player_crash("robot")  # 1 robot crash
+	
+	print("Run 2 Calculated Score (Expected 6510): ", DatabaseManager.display_score())
+	var run2_data: Dictionary = DatabaseManager.save_run()
+	print("Data Saved for Run 2: ", run2_data)
+	DatabaseManager.reset_run_stats()
+	print("------------------------------------\n")
+	
+	# 7. Check final lifetime accumulation totals
+	print("--- 5. FINAL LIFETIME STATS (2 TOTAL RUNS) ---")
+	print("Lifetime Stats: ", DatabaseManager.lifetime_stats())
+	print("====================================\n")
+	
+	# Execute Power Manager test suite
+	run_power_tests()
+	
+	# Execute Crystal Spawner test suite
+	run_crystal_spawn_tests()
+	
+## Comprehensive test suite for power.gd physics, invincibility, catch-up math, and signals
+func run_power_tests() -> void:
+	print("====================================")
+	print("--- FULL POWER TEST ---")
+	print("====================================\n")
+	
+	# Instantiate power node into tree so scene calls work safely
+	var power: Node = preload("res://power.gd").new()
+	add_child(power)
+	
+	# Use single-element arrays to safely pass boolean flags by reference into lambdas
+	var signal_power_updated: Array = [false]
+	var signal_invincible_updated: Array = [false]
+	var signal_game_over_fired: Array = [false]
+	
+	power.power_changed.connect(func(_curr, _max_p): signal_power_updated[0] = true)
+	power.invincibility_changed.connect(func(is_inv): signal_invincible_updated[0] = is_inv)
+	power.game_over_triggered.connect(func(): signal_game_over_fired[0] = true)
+	
+	# --- TEST 1: START RUN & INITIALIZATION ---
+	print("--- 1. START RUN INITIALIZATION ---")
+	power.start_run()
+	print("Run Active: ", power.is_run_active, " (Expected: true)")
+	print("Starting Speed: ", power.current_speed, " m/s (Expected: 15.0)")
+	print("Starting Power: ", power.current_power, " (Expected: 100.0)")
+	print("Is Invincible: ", power.is_invincible, " (Expected: false)")
+	print("Signal Emitted on Start: ", signal_power_updated[0], " (Expected: true)")
+	print("------------------------------------\n")
+	
+	# --- TEST 2: SIMULATE 10 SECONDS OF MOVEMENT & SPEED SCALING ---
+	print("--- 2. TIME STEP & SQRT DISTANCE ACCELERATION ---")
+	signal_power_updated[0] = false
+	
+	# Simulate 10 seconds of gameplay in steps of 1 second
+	for i in range(10):
+		power._process(1.0)
+		
+	print("Distance Traveled: ", power.distance_traveled, " meters")
+	print("Target Speed (sqrt scaled): ", power.target_speed, " m/s")
+	print("Current Speed: ", power.current_speed, " m/s")
+	print("Current Power (10s @ 5/s drain): ", power.current_power, " (Expected: 50.0)")
+	print("------------------------------------\n")
+	
+	# --- TEST 3: OBSTACLE HIT DAMAGE (25 UNIT POWER LOSS) ---
+	print("--- 3. OBSTACLE HIT DAMAGE ---")
+	power.obstacle_hit(25.0)
+	print("Power after 25 unit obstacle hit: ", power.current_power, " (Expected: 25.0)")
+	print("Is Coasting: ", power.is_coasting, " (Expected: false)")
+	print("------------------------------------\n")
+	
+	# --- TEST 4: DRAIN TO ZERO & COASTING TRIGGER ---
+	print("--- 4. ZERO POWER COASTING TRIGGER ---")
+	# Process 6 more seconds to drain remaining 25 power to 0
+	for i in range(6):
+		power._process(1.0)
+		
+	print("Current Power: ", power.current_power, " (Expected: 0.0)")
+	print("Is Coasting Active: ", power.is_coasting, " (Expected: true)")
+	print("------------------------------------\n")
+	
+	# --- TEST 5: CRYSTAL PICKUP, INVINCIBILITY & PAUSED DRAIN ---
+	print("--- 5. CRYSTAL PICKUP & INVINCIBILITY TRIGGER ---")
+	var coasting_speed: float = power.current_speed
+	print("Speed while coasting: ", coasting_speed, " m/s")
+	
+	power.collect_crystal()
+	print("Power after Crystal: ", power.current_power, " (Expected: 100.0)")
+	print("Is Coasting reset: ", power.is_coasting, " (Expected: false)")
+	print("Is Invincible active: ", power.is_invincible, " (Expected: true)")
+	print("Invincibility Timer: ", power.invincibility_timer, "s (Expected: 3.0)")
+	print("Invincibility Signal Emitted: ", signal_invincible_updated[0], " (Expected: true)")
+	
+	# Simulate 1 second step inside the invincibility window
+	power._process(1.0)
+	print("Power after 1s Invincibility (Paused Drain): ", power.current_power, " (Expected: 100.0)")
+	print("Speed after 1s Catch-Up: ", power.current_speed, " m/s (Expected: higher than ", coasting_speed, " m/s)")
+	print("------------------------------------\n")
+	
+	# --- TEST 6: OBSTACLE IMMUNITY DURING INVINCIBILITY ---
+	print("--- 6. OBSTACLE IMMUNITY DURING INVINCIBILITY ---")
+	power.obstacle_hit(25.0) # Attempt to deal damage during invincibility
+	print("Power after Obstacle Hit while Invincible: ", power.current_power, " (Expected: 100.0)")
+	print("------------------------------------\n")
+	
+	# --- TEST 7: CATCH-UP COMPLETION & INVINCIBILITY EXPIRATION ---
+	print("--- 7. CATCH-UP COMPLETION & INVINCIBILITY EXPIRATION ---")
+	# Process remaining 2 seconds of invincibility frame-by-frame
+	power._process(1.0)
+	power._process(1.0)
+	
+	print("Is Invincible after 3s total: ", power.is_invincible, " (Expected: false)")
+	print("Invincibility Signal Emitted (False): ", signal_invincible_updated[0] == false, " (Expected: true)")
+	print("Current Speed vs Target Speed: ", power.current_speed, " / ", power.target_speed, " m/s")
+	
+	# Process 1 additional second to verify power drain continues post-invincibility
+	power._process(1.0)
+	print("Power after 1s post-invincibility drain: ", power.current_power, " (Expected: 95.0)")
+	print("------------------------------------\n")
+	
+	# --- TEST 8: COASTING OBSTACLE HIT (INSTANT GAME OVER) ---
+	print("--- 8. COASTING OBSTACLE HIT (INSTANT GAME OVER) ---")
+	power.is_coasting = true
+	signal_game_over_fired[0] = false # Mutate existing array element
+	
+	power.obstacle_hit(25.0)
+	print("Game Over Signal Emitted: ", signal_game_over_fired[0], " (Expected: true)")
+	print("Run Active state: ", power.is_run_active, " (Expected: false)")
+	print("====================================")
+	
+	# Clean up test node
+	power.queue_free()
+	
+	## Comprehensive test suite for crystal_spawn.gd spawner logic, curves, and lifecycle
+func run_crystal_spawn_tests() -> void:
+	print("====================================")
+	print("--- FULL CRYSTAL SPAWN TEST ---")
+	print("====================================\n")
+	
+	# 1. Setup Test Hierarchy
+	var test_root := Node3D.new()
+	add_child(test_root)
+	
+	var player_node := Node3D.new()
+	test_root.add_child(player_node)
+	player_node.global_position = Vector3.ZERO
+	
+	var power_node: Node = preload("res://power.gd").new()
+	test_root.add_child(power_node)
+	
+	# Create a dummy PackedScene for crystal spawning
+	var dummy_crystal := Node3D.new()
+	var dummy_scene := PackedScene.new()
+	dummy_scene.pack(dummy_crystal)
+	dummy_crystal.free()
+	
+	# Instantiate Crystal Spawner
+	var spawner_script = preload("res://crystal_spawn.gd")
+	var spawner = Node3D.new()
+	spawner.set_script(spawner_script)
+	spawner.player = player_node
+	spawner.power = power_node
+	spawner.crystal_scene = dummy_scene
+	test_root.add_child(spawner)
+	
+	power_node.start_run()
+	
+	# --- TEST 1: SPEED & REACTION TIME CURVE HELPER MATH ---
+	print("--- 1. SPEED & REACTION TIME CURVES ---")
+	var clamped_base_speed: float = spawner._get_clamped_speed()
+	var base_reaction: float = spawner._get_reaction_time(clamped_base_speed)
+	print("Base Speed (15 m/s) Clamped: ", clamped_base_speed, " (Expected: 15.0)")
+	print("Base Reaction Time: ", base_reaction, "s (Expected: 3.0)")
+	
+	var mach1_reaction: float = spawner._get_reaction_time(spawner.max_speed)
+	print("Mach 1 (343 m/s) Reaction Time: ", mach1_reaction, "s (Expected: 1.0)")
+	print("------------------------------------\n")
+	
+	# --- TEST 2: INITIAL SPAWN TIMER CALCULATIONS ---
+	print("--- 2. INITIAL SPAWN TIMER & COUNTDOWN ---")
+	print("Is Waiting to Spawn: ", spawner._is_waiting_to_spawn, " (Expected: true)")
+	print("Spawn Timer Armed (> 0s): ", spawner._spawn_timer > 0.0)
+	
+	# Fast-forward process to force spawn crystal
+	var time_to_wait: float = spawner._spawn_timer + 0.1
+	spawner._process(time_to_wait)
+	
+	var active_crystal: Node3D = spawner._active_crystal
+	print("Active Crystal Spawned: ", is_instance_valid(active_crystal), " (Expected: true)")
+	if is_instance_valid(active_crystal):
+		print("Spawned Distance Ahead of Player: ", -active_crystal.global_position.z, " meters")
+	print("------------------------------------\n")
+	
+	# --- TEST 3: CRYSTAL COLLECTION EVENT ---
+	print("--- 3. CRYSTAL COLLECTION ---")
+	spawner.on_crystal_collected()
+	print("Active Crystal Freed on Collection: ", not is_instance_valid(spawner._active_crystal), " (Expected: true)")
+	print("Is Waiting to Spawn Next Crystal: ", spawner._is_waiting_to_spawn, " (Expected: true)")
+	print("------------------------------------\n")
+	
+	# --- TEST 4: CRYSTAL MISSED EVENT ---
+	print("--- 4. CRYSTAL MISSED EVENT ---")
+	# Force spawn a crystal
+	spawner._process(spawner._spawn_timer + 0.1)
+	var second_crystal: Node3D = spawner._active_crystal
+	print("Second Crystal Spawned: ", is_instance_valid(second_crystal), " (Expected: true)")
+	
+	# Move crystal behind player (> 5 meters) to simulate passing
+	if is_instance_valid(second_crystal):
+		second_crystal.global_position = player_node.global_position + Vector3(0, 0, 6.0)
+		spawner._process(0.1) # Triggers on_crystal_missed inside _process
+		
+	print("Active Crystal Freed After Passing Player: ", not is_instance_valid(spawner._active_crystal), " (Expected: true)")
+	print("Is Waiting for Next Spawn: ", spawner._is_waiting_to_spawn, " (Expected: true)")
+	print("------------------------------------\n")
+	
+	# --- TEST 5: INVINCIBILITY DELAY OFFSET ---
+	print("--- 5. INVINCIBILITY SPAWN DELAY OFFSET ---")
+	power_node.is_invincible = true
+	power_node.invincibility_timer = 3.0
+	
+	spawner._calculate_and_start_spawn_timer()
+	print("Spawn Timer Includes Invincibility (>= 3.0s): ", spawner._spawn_timer >= 3.0)
+	print("====================================\n")
+	
+	# Clean up test hierarchy
+	test_root.queue_free()
+
+
+
+=== FILE: res://testing_ground.tscn ===
+[gd_scene format=3 uid="uid://csud42wqpny2d"]
+
+[ext_resource type="Script" uid="uid://bptf2xmr8avlg" path="res://ProceduralGenerator.gd" id="1_nxusl"]
+[ext_resource type="PackedScene" uid="uid://bohcd45ewcaui" path="res://Player/player.tscn" id="1_q4otm"]
+[ext_resource type="PackedScene" uid="uid://bfyf2n3db7drf" path="res://Streets/street_template.tscn" id="3_nxusl"]
+[ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
+[ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
+[ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
+size = Vector3(21, 15, 1)
+
+[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("crystal_spawner", "player")]
+script = ExtResource("1_nxusl")
+crystal_spawner = NodePath("CrystalSpawner")
+player = NodePath("Player")
+
+[node name="Player" parent="." unique_id=196411886 node_paths=PackedStringArray("power_node", "Wall_Detection") instance=ExtResource("1_q4otm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
+power_node = NodePath("../Power")
+Wall_Detection = NodePath("..")
+
+[node name="Roads" type="Node3D" parent="." unique_id=564614269]
+
+[node name="StreetTemplate" parent="Roads" unique_id=82585562 instance=ExtResource("3_nxusl")]
+starting_street_node = true
+
+[node name="In_Road" type="Node3D" parent="." unique_id=1196056530]
+
+[node name="Power" type="Node" parent="." unique_id=638170115 node_paths=PackedStringArray("player")]
+script = ExtResource("4_nxusl")
+player = NodePath("../Player")
+
+[node name="Row_Detector" type="Area3D" parent="." unique_id=587142436]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Row_Detector" unique_id=1184232590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+shape = SubResource("BoxShape3D_jp6wc")
+
+[node name="CrystalSpawner" type="Node3D" parent="." unique_id=1351622964 node_paths=PackedStringArray("player", "power")]
+script = ExtResource("5_ytm02")
+crystal_scene = ExtResource("6_1phy5")
+player = NodePath("../Player")
+power = NodePath("../Power")
+
+[node name="Obstacles" type="Node3D" parent="." unique_id=1141337569]
+
+[connection signal="body_entered" from="Row_Detector" to="." method="_on_row_detector_body_entered"]
+
+
+

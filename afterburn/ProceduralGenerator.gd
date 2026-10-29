@@ -1,67 +1,83 @@
-## World generator managing infinite procedural road chunks, dynamic obstacle rows,
-## passability validation, and low-overhead queue memory recycling.
 extends Node3D
 
-## Emitted when the player collides with an obstacle on the track.
-signal Wall_Hit
+signal Wall_Hit # A signal for when a wall is hit
 
-# Preloaded scene templates for procedural road sections, buildings, and obstacles
-const STREET_TEMPLATE1 = preload("res://Streets/street_template.tscn")
-const BUILDING1 = preload("res://Streets/Building.tscn")
-const JUMP_OBSTACLE = preload("res://Obstacles/Testing_Beam.tscn")
-const WALL = preload("res://Obstacles/Wall.tscn")
-const SLIDE_BEAM = preload("res://Obstacles/Sliding_Beam.tscn")
+# ------- Scenes to be loaded -------
 
-# Layout spacing constants
-const DIST_BETWEEN_SIDE_OBJECTS: int = 30
-const MIN_LOCAL_DIST: int = 60
-const DIST_TO_SIDE: float = 9.5
+# Road scenes
+const STREET_TEMPLATE1 = preload("res://Streets/street_template.tscn") # Road 1 Scene
 
-# Safe camera frustum despawn buffer distances (in world Z units behind player)
+# Side thing scenes
+const BUILDING1 = preload("res://Streets/Building.tscn") # Building 1 Scene
+
+# Obstacle scenes
+const JUMP_OBSTACLE = preload("res://Obstacles/Testing_Beam.tscn") # An obstacle to jump over
+const WALL = preload("res://Obstacles/Wall.tscn") # A wall you cannot jump over
+const SLIDE_BEAM = preload("res://Obstacles/Sliding_Beam.tscn") # A beam you must slide under
+
+# ------- VARIABLES -------
+
+# Constants
+const DIST_BETWEEN_SIDE_OBJECTS: int = 30 # Distance between the things on the side
+const MIN_LOCAL_DIST: int = 60 # The minimum local z point where things on the side can spawn
+const MAX_LOCAL_DIST: int = 300 # The maximum local z point where things on the side can spawn
+const DIST_TO_SIDE: float = 9.5 # The distance to the side of the road from the middle
+const LEFT_ANGLE: float = 90.0  # The left side's angle to put the things on the side at
+const RIGHT_ANGLE: float = -90.0 # The right side's angle to put the things on the side at
+
+# Safe camera frustum despawn buffer distances
 const ROW_DESPAWN_OFFSET: float = 25.0
 const ROAD_DESPAWN_OFFSET: float = 40.0
 
-# Registry arrays used for procedural instantiation
-var roads_to_spawn: Array = [STREET_TEMPLATE1]
-var side_to_spawn: Array = [BUILDING1]
-var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM]
+# Arrays to choose from for spawning
+var roads_to_spawn: Array = [STREET_TEMPLATE1] # Possible roads to spawn
+var side_to_spawn: Array = [BUILDING1] # Possible things to spawn on the sides
+var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obstacles to spawn
 
-@export_category("Node References")
-## Reference to the main player controller.
-@export var player: Player
+# Nodes
+@onready var starting_street: street = $Roads/StreetTemplate # The starting street
+@onready var in_road: Node3D = $In_Road # The parent node of all things in the road
+@onready var roads: Node3D = $Roads # The node all roads are under
+@onready var power: Node = $Power # The power controller
+@onready var row_detector: Area3D = $Row_Detector # The thing that detects if you passed the row
+@onready var obstacles: Node3D = $Obstacles # The parent node of the obstacles
+@export var crystal_spawner: Node3D # The spawner of crystals
+@export var player: Player # The player
 
-@export_category("Spawn Configuration")
-## Percentage chance (1 to 100) of spawning an obstacle in each lane.
-@export var percentage_obstacle_spawned: int = 50
+# Exported variables
+@export var obstacle_min_reaction_time: float = 0.5 # The minimum reaction time for obstacles
+@export var obstacle_max_reaction_time: float = 1.0 # The maximum reaction time for obstacles
+@export var obstacle_speed_difference: float = 5.0 # The difference in speed between the crystal spawner and the obstacle spawner
+@export var percentage_obstacle_spawned: int = 50 # the percentage change for each obstacle to be spawned
 
-@onready var starting_street: street = $Roads/StreetTemplate
-@onready var roads: Node3D = $Roads
-@onready var power: Node = $Power
-@onready var row_detector: Area3D = $Row_Detector
-@onready var obstacles: Node3D = $Obstacles
+# Variables
+var current_road_count: int = 1 # The current amount of roads currently existing
+var set_up: bool = false # A variable for if the rows have been set up
+var road_1: street # The road the player is on
+var road_2: street # The next road to be entered
+var road_3: street # The road to be loaded upon entering next road
+var row_count: int = 0 # The amount of rows currently in the game
+var rows_passed: int = 0 # The amount of rows the player has passed
+var current_rows: Array = [] # The current rows in existance
+var row_to_free # The row that will be freed when you pass a row
 
-# Runtime queue management state
-var current_road_count: int = 1
-var set_up: bool = false
-var road_1: street
-var road_2: street
-var road_3: street
-var row_count: int = 0
-var current_rows: Array = []
-var row_to_free: Node
+# ------- METHODS -------
 
-
+## Connects the starting street signal to the method.
+## Runs on startup
 func _ready() -> void:
-	# Initialize starting road queue (road_1 at 0m, road_2 at -300m, road_3 at -600m)
+	# Set road 1 to starting street
 	road_1 = starting_street
 	populate_side_props(road_1)
 	
 	road_2 = create_next_road(road_1)
 	road_3 = create_next_road(road_2)
 	
-	# Pre-populate initial obstacle queue buffer (15 rows ahead of player)
+	# while there is less than 15 rows, summon a row of obstacles
 	while current_rows.size() < 15:
 		summon_row_obstacles()
+	
+	# Place the Area3D to the closest row before the player
 	place_Area3D(current_rows.front().global_position.z)
 
 
@@ -84,7 +100,8 @@ func _process(_delta: float) -> void:
 		advance_road_queue()
 
 
-## Recycles oldest trailing road segment behind player and appends new road chunk ahead.
+## Removes old roads, buildings, and obstacles. 
+## Run to disable the previous area
 func advance_road_queue() -> void:
 	if is_instance_valid(road_1):
 		road_1.queue_free()
@@ -94,7 +111,8 @@ func advance_road_queue() -> void:
 	road_3 = create_next_road(road_2)
 
 
-## Instantiates upcoming road tile at the end anchor of target street node.
+## Spawns the roads and buildings on the links.
+## Function runs to enter road
 func create_next_road(street_node: street) -> street:
 	var new_road = summon_road()
 	new_road.global_position = street_node.end_link.global_position
@@ -102,7 +120,6 @@ func create_next_road(street_node: street) -> street:
 	return new_road
 
 
-## Instantiates side environment props along borders of a road chunk.
 func populate_side_props(street_node: street) -> void:
 	var distance_down_road: int = MIN_LOCAL_DIST
 	while distance_down_road < 300:
@@ -111,27 +128,28 @@ func populate_side_props(street_node: street) -> void:
 		
 		current_left_spawn.position = Vector3(-DIST_TO_SIDE, 0.0, -distance_down_road)
 		current_right_spawn.position = Vector3(DIST_TO_SIDE, 0.0, -distance_down_road)
-		current_left_spawn.global_rotation.y = deg_to_rad(90.0)
-		current_right_spawn.global_rotation.y = deg_to_rad(-90.0)
+		current_left_spawn.global_rotation.y = deg_to_rad(LEFT_ANGLE)
+		current_right_spawn.global_rotation.y = deg_to_rad(RIGHT_ANGLE)
 		
 		distance_down_road += DIST_BETWEEN_SIDE_OBJECTS
 
 
-## Adds obstacle to group and connects collision signal handlers.
+## Used to connect the obstacle's signal to the method
 func connect_obstacle(obstacle: Node3D) -> void:
 	obstacle.add_to_group("Obstacles")
 	if obstacle.has_signal("body_entered"):
 		obstacle.body_entered.connect(body_entered)
 
 
-## Callback triggered on player collision with an obstacle node.
+## Runs on body entering.
+## Connects to obstacles which can be hit
 func body_entered(body: Node3D) -> void:
 	if body.is_in_group("Player"):
 		power.obstacle_hit()
 		Wall_Hit.emit()
 
 
-## Generates a new row of obstacles and verifies track passability.
+## Summons a row of obstacles
 func summon_row_obstacles() -> void:
 	var taken_rows: Array = []
 	var wall_spawns: Array = []
@@ -142,17 +160,16 @@ func summon_row_obstacles() -> void:
 	row_reference.name = "Row" + str(row_count)
 	obstacles.add_child(row_reference)
 
-	# Calculate row Z-coordinate before lane rolls to guarantee row is always tracked in queue
 	var basis_node: Node3D = player if not set_up else current_rows.back()
 	var basis_z: float = basis_node.global_position.z if is_instance_valid(basis_node) else 0.0
-	var spawn_dist: float = _get_reaction_spawn_distance()
+	var spawn_dist: float = find_optimal_distance()
 	var row_z: float = basis_z - spawn_dist
 
 	row_reference.global_position = Vector3(0.0, 0.0, row_z)
 	current_rows.append(row_reference)
 	set_up = true
 	
-	# Iterate across 5 track lane indices (-2, -1, 0, 1, 2)
+	# For loop for each row index
 	for num in [-2, -1, 0, 1, 2]:
 		if randi_range(1, 100) <= percentage_obstacle_spawned:
 			if taken_rows.size() >= 5:
@@ -177,7 +194,6 @@ func summon_row_obstacles() -> void:
 			var current_row: int = main_row
 			taken_rows.append(current_row)
 			
-			# Reserve adjacent lanes for wide obstacles that stretch across multiple rows
 			for row_num in obstacle_instance.Row_Count - 1:
 				if obstacle_instance.direction_stretched == "Right":
 					current_row += 1
@@ -187,20 +203,26 @@ func summon_row_obstacles() -> void:
 			
 			obstacle_instance.position.x = num * 3.0
 			
-			# Track wall obstacles to validate passability
-			if obstacle_instance.dodge_capabilities == "False":
+			# Detect the number of walls and put it into the wall count variable
+			if detect_walls(obstacle_instance):
 				wall_count += 1
 				wall_spawns.append(obstacle_instance)
 	
-	# Passability check: If all 5 lanes are blocked by walls, clear one wall to guarantee an open path
+	# If the wall count is 5 or more, pick a random one and delete it
 	if wall_count >= 5 and not wall_spawns.is_empty():
 		var to_free = wall_spawns.pick_random()
 		if is_instance_valid(to_free):
 			to_free.queue_free()
 
 
-## Derives spawn distance from target speed and linear rate scaling (1.0X at 15 m/s to 12.0X at 343 m/s).
-func _get_reaction_spawn_distance() -> float:
+## Detects if the given obstacle is a wall
+func detect_walls(obstacle: Obstacle):
+	if obstacle.dodge_capabilities == "False":
+		return true
+
+
+## Finds the optimal distance for an obstacle
+func find_optimal_distance() -> float:
 	if not power:
 		return 22.5
 
@@ -210,35 +232,33 @@ func _get_reaction_spawn_distance() -> float:
 
 	var clamped_spd: float = clampf(target_spd, base_spd, max_spd)
 
-	# Linearly scale passing rate (rows per second) across target speed
-	var base_rate: float = 1.0 / 1.50          # 0.667 rows/sec at 15 m/s (1.0X)
-	var max_rate: float = base_rate * 12.0     # 8.000 rows/sec at 343 m/s (12.0X)
+	var base_rate: float = 1.0 / 1.50
+	var max_rate: float = base_rate * 12.0
 
 	var current_rate: float = remap(clamped_spd, base_spd, max_spd, base_rate, max_rate)
 	return clamped_spd / current_rate
 
 
-## Spawns a new road segment and returns reference.
+## Summons a road and returns said road to later be put in its place
 func summon_road() -> street:
 	var road_spawn = roads_to_spawn.pick_random().instantiate() as street
 	roads.add_child(road_spawn)
 	return road_spawn
 
 
-## Spawns side scenery buildings attached to a road segment.
+## Summons something to go on the side of the road, such as buildings
 func summon_side(road_node: street) -> Node3D:
 	var side_spawn = side_to_spawn.pick_random().instantiate() as Node3D
 	road_node.add_child(side_spawn)
 	return side_spawn
 
 
-## Advances the row queue when player passes detector: Frees oldest row and appends new row.
+## Runs what happens when running into the area3D to detect when the player passes a row
 func _on_row_detector_body_entered(body: Node3D) -> void:
 	if body.is_in_group("Player"):
 		_advance_row_queue()
 
 
-## Core queue advancing subroutine safely shared between collision triggers and process fallbacks.
 func _advance_row_queue() -> void:
 	if current_rows.is_empty():
 		return
@@ -250,6 +270,6 @@ func _advance_row_queue() -> void:
 		place_Area3D(current_rows.front().global_position.z)
 
 
-## Repositions row detector Area3D to trigger at the front row Z-coordinate.
+## Places the area3D's global_position to the given variable
 func place_Area3D(z_loc: float) -> void:
 	row_detector.global_position.z = z_loc

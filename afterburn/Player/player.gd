@@ -1,57 +1,54 @@
-## Player character controller script.
-## Manages 5-lane strafing, kinematic jumping/sliding physics, dynamic HUD updates, and movement stat multipliers modified by active gadgets.
 extends Node3D
 class_name Player
 
-## Emitted when player initiates a ground slide maneuver.
-signal sliding
+signal sliding # A signal for when sliding
+signal dashing # A signal for when dashing
 
-## Emitted when player triggers a forward speed dash.
-signal dashing
-
-@export_category("Node References")
-## Reference to the main power manager node tracking run state and speed.
-@export var power_node: Node
-
-## Reference to the front-facing wall collision detector node.
-@export var Wall_Detection: Node3D
-
-@onready var camera: Camera3D = $Body/Camera3D
-@onready var score_label: Label = $Body/UI/ScoreLabel
-@onready var row_squares: Node2D = $Body/UI/Row_Squares
-@onready var body: CharacterBody3D = $Body
-@onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator"
-@onready var power_meter: ProgressBar = $"Body/UI/Power Meter"
-@onready var speed_label: Label = $Body/UI/SpeedLabel
-@onready var animation_player: AnimationPlayer = $Body/AnimationPlayer
+# Nodes of note
+@onready var camera: Camera3D = $Body/Camera3D # The camera
+@onready var score_label: Label = $Body/UI/ScoreLabel # The label which shows the score
+@onready var row_squares: Node2D = $Body/UI/Row_Squares # The parent node of the row indicators
+@onready var body: CharacterBody3D = $Body # The body of the player
+@onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator" # An inidicator for when invincible
+@onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
+@onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
+@onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
 @onready var timer: Timer = $Timer
+@onready var model: Node3D = $"Body/Main Character Placeholder"
+@export var power_node: Node # The node that controls the power of the skateboard
+@export var Wall_Detection: Node3D # The script that detects when walls are hit
 
-# Discrete lane boundaries and physics constants
-const MIN_ROW_INDEX: int = -2
-const MAX_ROW_INDEX: int = 2
-const JUMP_VELOCITY: float = 7.0
-const GRAVITY: float = 12.0
-const STRAFE_SPEED: float = 15.0
-const DASH_DRAIN_RATE: float = 10.0
-const DASH_MULTIPLIER: float = 2.0
+# Constants
+const MIN_ROW_INDEX: int = -2 # The minimum row
+const MAX_ROW_INDEX: int = 2 # The maximum row
+const JUMP_VELOCITY: float = 7.0 # The velocity of the jump
+const GRAVITY: float = 12.0 # The strength of gravity
+const STRAFE_SPEED: float = 15.0  # The speed of strafing
+const DASH_DRAIN_RATE: float = 10.0 # The rate at which the dash speed drains back to normal
+const dash_multiplier: float = 2.0 # The multiplier to the speed when dashing
 
-# Runtime state trackers
-var current_speed: float = 15.0
-var row_index: int = 0
-var current_row_offset: float = 0.0
-var is_sliding: bool = false
-var is_dashing: bool = false
-var starting_run: bool = true
+# Regular variables
+var current_speed: float = 15.0 # The speed of movement
+var row_index: int = 0 # The current row
+var current_row_offset: float = 0.0 # The offset of the current row
+var score: int = 0 # The current score
+var is_sliding: bool = false # A bool to show if you are currently sliding
+var is_dashing: bool = false # A bool to show if you are starting dashing
+var starting_run: bool = true # A bool to show if the run is starting
+var hit_wall: bool = false
 
 # Dynamic stat multipliers overridden by gadgets (e.g., Hoverboard)
 var jump_velocity_multiplier: float = 1.0
 var gravity_multiplier: float = 1.0
 var dash_drain_multiplier: float = 1.0
 
-
+## Runs when the scene is instanced or loaded in
 func _ready() -> void:
+	
+	# Apply the power node's signals signals
 	connect_signals()
-	# Set idle state color for invincibility visual indicator
+	
+	# set the invincibility indicator
 	invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
 	
 	# Programmatically instantiate and attach GadgetUI node to player HUD
@@ -63,139 +60,192 @@ func _ready() -> void:
 		gadget_ui.player = self
 		gadget_ui.power_node = power_node
 		$Body/UI.add_child(gadget_ui)
+	
+	# Capture the mouse
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-
-## Processes keyboard and mouse input events for lane switching, abilities, and UI focus.
+## Runs on input of any kind
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("Click") and power_node and power_node.is_run_active:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
+	# If the player clicks, set the mouse to capture
+	if event.is_action_pressed("Click") and power_node and power_node.is_run_active: Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
+	# If A is pressed, move left
 	if event.is_action_pressed("A"): move_left()
-	if event.is_action_pressed("D"): move_right()
-	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): slide()
 	
-	if event.is_action_pressed("W") and power_node and power_node.current_power >= power_node.dash_cost:
-		is_dashing = true
-		dashing.emit()
+	# If D is pressed, move right
+	if event.is_action_pressed("D"): move_right()
+	
+	# If Shift is pressed and the player is not currently sliding and the player is on the floor, begin slide
+	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): 
+		slide()
+	
+	# If W is pressed and the current power is greater than or equal to the cost
+	if event.is_action_pressed("W") and power_node:
+		if power_node.current_power >= power_node.dash_cost:
+			
+			# Set dashing to true and emit the dashing signal
+			is_dashing = true
+			dashing.emit()
 	
 	if event.is_action_pressed("Gadget"):
 		if power_node and power_node.has_method("try_use_loadout_gadget"):
 			power_node.try_use_loadout_gadget()
 	
+	# If ESC is pressed, set mouse to visible
 	if event.is_action_pressed("ESC"): Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-
-## Shifts target lane index left by one row unit (-X direction).
+## Moves the active row to the left one
 func move_left() -> void:
+	
+	# If row is above the minimum, lower row
 	if row_index > MIN_ROW_INDEX:
 		row_index -= 1
+		
+		# Update the target row location
 		update_target_row()
 
-
-## Shifts target lane index right by one row unit (+X direction).
+## Moves the active row to the right one
 func move_right() -> void:
+	
+	# If row is less than the max, increase row
 	if row_index < MAX_ROW_INDEX:
 		row_index += 1
+		
+		# Update the target row location
 		update_target_row()
 
+## Function to update the target row
+## Set current row location to the location of the current row1
+func update_target_row() -> void: current_row_offset = int(row_index) * 3
 
-## Calculates target X-axis position based on current 3-unit lane spacing.
-func update_target_row() -> void:
-	current_row_offset = int(row_index) * 3
-
-
-## Physical movement processing loop for strafing, jumping, dashing, and HUD state updates.
+## Runs 60 times a second
 func _physics_process(delta: float) -> void:
 	if not power_node or not power_node.is_run_active:
 		return
-		
-	# Update power meter progress bar value
+
+	if not animation_player.is_playing():
+		model.play_anim("Idle")
+	# Set the power meter to reflect the current power
 	if power_meter:
 		power_meter.value = min(power_node.current_power, 100.0)
 	
-	speed_label.text = "SPEED(MPS): %.1f" % current_speed
-	if get_node_or_null("/root/DatabaseManager"):
-		score_label.text = "SCORE: %d" % DatabaseManager.display_score()
+	# Update text to reflect current speed and score
+	speed_label.text = ("SPEED(MPS): " + str(int(current_speed)))
+	score_label.text = ("SCORE: " + str(DatabaseManager.display_score()))
 	
+	# Update the row squares
 	update_row_square()
+	
+	# Set sideways movement to 0
 	body.velocity.x = 0.0
 	
-	# Apply forward Z-velocity based on dash status and power manager velocity
+	# If you are dashing, set the velocity to current speed of the power, 
+	# times the dash multiplier and set is dashing to false
 	if is_dashing:
-		body.velocity.z = -power_node.current_speed * DASH_MULTIPLIER
+		body.velocity.z = -power_node.current_speed * dash_multiplier
 		is_dashing = false
+	
+	# Otherwise if you are starting the run, set the initial velocity and note that it was set up
 	elif starting_run:
 		body.velocity.z = -power_node.current_speed
 		starting_run = false
+	
+	# If neither are true, change the speed towards the current speed in power by 10 MPS/s
 	else:
 		var target_vel_z: float = -power_node.current_speed
 		if body.velocity.z < target_vel_z:
-			# Decelerate boost velocity down to standard target run speed
 			var active_drain_rate: float = DASH_DRAIN_RATE * dash_drain_multiplier
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, active_drain_rate * delta)
 		else:
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
 	
+	# Set the current speed to the forward velocity of the body
 	current_speed = -body.velocity.z
-	# Interpolate physical X position toward target lane coordinate
+	
+	# move position of player to the current row and bring rows with body
 	body.global_position.x = move_toward(body.global_position.x, current_row_offset, STRAFE_SPEED * delta)
 	
-	# Process vertical jump mechanics and cancel active slide animation
+	# Runs if space is pressed and you are on the floor
 	if Input.is_action_just_pressed("Space") and body.is_on_floor():
+		
+		# If you are sliding, cancel it
 		if is_sliding:
 			if animation_player.current_animation == "Slide":
 				animation_player.stop()
+				
 			is_sliding = false
+		
+		# Apply jump velocity
 		body.velocity.y += (JUMP_VELOCITY * jump_velocity_multiplier)
 	
-	# Apply downward gravitational acceleration when airborne
+	# If player is not on floor, apply gravity
 	if not body.is_on_floor():
 		body.velocity.y -= (GRAVITY * gravity_multiplier) * delta
 	
+	# Move the body according to the set velocities
 	body.move_and_slide()
 
-
-## Highlights active row indicator box on the HUD based on current lane index.
-func update_row_square() -> void:
-	var active_row_name = "Row" + str(row_index + 3)
+## Updates the square representing the row you are in
+func update_row_square():
+	
+	# For loop for children nodes of the row squares parent node
 	for child in row_squares.get_children():
-		child.modulate = Color(1.0, 1.0, 1.0, 1.0) if child.name == active_row_name else Color(0.0, 0.0, 0.0, 1.0)
+		
+		# Get the number of the row by increasing the index by 3
+		var row_num = row_index + 3
+		
+		# If the name matches the row you are in, then make the square white
+		if child.name == ("Row" + str(row_num)):
+			child.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		
+		# Otherwise, make it black
+		else: child.modulate = Color(0.0, 0.0, 0.0, 1.0)
 
+## Connects the necessary signals to their respective methods
+func connect_signals():
+	power_node.invincibility_changed.connect(_on_power_invincibility_changed)
+	power_node.game_over_triggered.connect(lose)
+	Wall_Detection.Wall_Hit.connect(hit)
 
-## Connects power manager and wall detection signals to player handling callbacks.
-func connect_signals() -> void:
-	if power_node:
-		power_node.invincibility_changed.connect(_on_power_invincibility_changed)
-		power_node.game_over_triggered.connect(lose)
-	if Wall_Detection:
-		Wall_Detection.Wall_Hit.connect(hit)
-
-
-## Modulates invincibility HUD indicator color when invincibility state changes.
+## Changes the color of the Invincibility UI
 func _on_power_invincibility_changed(is_invincible: bool) -> void:
-	invincible_indicator.modulate = Color(0.843, 0.733, 0.0, 0.573) if is_invincible else Color(0.0, 0.0, 0.0, 0.325)
+	
+	# if player is invincible, make it yellow, showing it is active 
+	if is_invincible: invincible_indicator.modulate = Color(0.843, 0.733, 0.0, 0.573)
+	
+	# Otherwise, make it translucent black
+	else: invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
 
-
-## Starts restart countdown timer on run defeat.
-func lose() -> void:
+## Runs on losing the game
+## As of right now only prints a message that the player lost
+func lose():
+	print("YOU LOST")
+	# Just an option, you could instead of creating a timer node, do "await get_tree().create_timer(3).timeout" then the next thing in the line after
 	timer.start()
 
-
-## Executes slide animation sequence.
-func slide() -> void:
+## Begins the sliding state
+func slide():
+	model.animation_player.stop()
+	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()
 	is_sliding = true
+	
+	# Play the animation and wait for it to finish
 	animation_player.play("Slide")
+	model.play_anim("Slide")
 	await animation_player.animation_finished
+	
+	# Set sliding to false
 	is_sliding = false
 
-
-## Plays wall impact animation sequence when colliding with an obstacle.
-func hit() -> void:
+## Runs the hit wall animation upon being called
+func hit(): 
 	animation_player.stop()
 	animation_player.play("Hit_Wall")
 
-
-## Reloads current scene upon death timer expiration.
 func _on_timer_timeout() -> void:
 	get_tree().reload_current_scene()
+
+func play_body_anim(Anim_Name):
+	model.play_anim(Anim_Name)
