@@ -36,7 +36,6 @@ var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obs
 
 # Nodes
 @onready var starting_street: street = $Roads/StreetTemplate # The starting street
-@onready var in_road: Node3D = $In_Road # The parent node of all things in the road
 @onready var roads: Node3D = $Roads # The node all roads are under
 @onready var power: Node = $Power # The power controller
 @onready var row_detector: Area3D = $Row_Detector # The thing that detects if you passed the row
@@ -45,19 +44,14 @@ var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obs
 @export var player: Player # The player
 
 # Exported variables
-@export var obstacle_min_reaction_time: float = 0.5 # The minimum reaction time for obstacles
-@export var obstacle_max_reaction_time: float = 1.0 # The maximum reaction time for obstacles
-@export var obstacle_speed_difference: float = 5.0 # The difference in speed between the crystal spawner and the obstacle spawner
 @export var percentage_obstacle_spawned: int = 50 # the percentage change for each obstacle to be spawned
 
 # Variables
-var current_road_count: int = 1 # The current amount of roads currently existing
 var set_up: bool = false # A variable for if the rows have been set up
 var road_1: street # The road the player is on
 var road_2: street # The next road to be entered
 var road_3: street # The road to be loaded upon entering next road
 var row_count: int = 0 # The amount of rows currently in the game
-var rows_passed: int = 0 # The amount of rows the player has passed
 var current_rows: Array = [] # The current rows in existance
 var row_to_free # The row that will be freed when you pass a row
 

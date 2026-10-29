@@ -35,7 +35,6 @@ var score: int = 0 # The current score
 var is_sliding: bool = false # A bool to show if you are currently sliding
 var is_dashing: bool = false # A bool to show if you are starting dashing
 var starting_run: bool = true # A bool to show if the run is starting
-var hit_wall: bool = false
 
 # Dynamic stat multipliers overridden by gadgets (e.g., Hoverboard)
 var jump_velocity_multiplier: float = 1.0
@@ -246,6 +245,3 @@ func hit():
 
 func _on_timer_timeout() -> void:
 	get_tree().reload_current_scene()
-
-func play_body_anim(Anim_Name):
-	model.play_anim(Anim_Name)
