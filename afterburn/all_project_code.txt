@@ -1159,7 +1159,7 @@ signal dashing # A signal for when dashing
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
 @onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
 @onready var timer: Timer = $Timer
-@onready var model: Node3D = $"Body/Main Character Placeholder"
+@onready var model: Node3D = get_node_or_null("Body/Main Character Placeholder")
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
 
@@ -1180,7 +1180,6 @@ var score: int = 0 # The current score
 var is_sliding: bool = false # A bool to show if you are currently sliding
 var is_dashing: bool = false # A bool to show if you are starting dashing
 var starting_run: bool = true # A bool to show if the run is starting
-var hit_wall: bool = false
 
 # Dynamic stat multipliers overridden by gadgets (e.g., Hoverboard)
 var jump_velocity_multiplier: float = 1.0
@@ -1269,14 +1268,14 @@ func _physics_process(delta: float) -> void:
 	if not power_node or not power_node.is_run_active:
 		return
 
-	if not animation_player.is_playing():
+	if model and model.has_method("play_anim") and not animation_player.is_playing():
 		model.play_anim("Idle")
 	# Set the power meter to reflect the current power
 	if power_meter:
 		power_meter.value = min(power_node.current_power, 100.0)
 	
 	# Update text to reflect current speed and score
-	speed_label.text = ("SPEED(MPS): " + str(int(current_speed)))
+	speed_label.text = ("SPEED(MPS): " + "%.1f" % current_speed)
 	score_label.text = ("SCORE: " + str(DatabaseManager.display_score()))
 	
 	# Update the row squares
@@ -1371,14 +1370,18 @@ func lose():
 
 ## Begins the sliding state
 func slide():
-	model.animation_player.stop()
+	if model and "animation_player" in model and model.animation_player:
+		model.animation_player.stop()
+		
 	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()
 	is_sliding = true
 	
 	# Play the animation and wait for it to finish
 	animation_player.play("Slide")
-	model.play_anim("Slide")
+	if model and model.has_method("play_anim"):
+		model.play_anim("Slide")
+		
 	await animation_player.animation_finished
 	
 	# Set sliding to false
@@ -1391,9 +1394,6 @@ func hit():
 
 func _on_timer_timeout() -> void:
 	get_tree().reload_current_scene()
-
-func play_body_anim(Anim_Name):
-	model.play_anim(Anim_Name)
 
 
 ================================================================================
@@ -2081,7 +2081,6 @@ var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obs
 
 # Nodes
 @onready var starting_street: street = $Roads/StreetTemplate # The starting street
-@onready var in_road: Node3D = $In_Road # The parent node of all things in the road
 @onready var roads: Node3D = $Roads # The node all roads are under
 @onready var power: Node = $Power # The power controller
 @onready var row_detector: Area3D = $Row_Detector # The thing that detects if you passed the row
@@ -2090,19 +2089,14 @@ var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obs
 @export var player: Player # The player
 
 # Exported variables
-@export var obstacle_min_reaction_time: float = 0.5 # The minimum reaction time for obstacles
-@export var obstacle_max_reaction_time: float = 1.0 # The maximum reaction time for obstacles
-@export var obstacle_speed_difference: float = 5.0 # The difference in speed between the crystal spawner and the obstacle spawner
 @export var percentage_obstacle_spawned: int = 50 # the percentage change for each obstacle to be spawned
 
 # Variables
-var current_road_count: int = 1 # The current amount of roads currently existing
 var set_up: bool = false # A variable for if the rows have been set up
 var road_1: street # The road the player is on
 var road_2: street # The next road to be entered
 var road_3: street # The road to be loaded upon entering next road
 var row_count: int = 0 # The amount of rows currently in the game
-var rows_passed: int = 0 # The amount of rows the player has passed
 var current_rows: Array = [] # The current rows in existance
 var row_to_free # The row that will be freed when you pass a row
 
