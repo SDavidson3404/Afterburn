@@ -14,7 +14,7 @@ signal dashing # A signal for when dashing
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
 @onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
 @onready var timer: Timer = $Timer
-@onready var model: Node3D = $"Body/Main Character Placeholder"
+@onready var model: Node3D = get_node_or_null("Body/Main Character Placeholder")
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
 
@@ -123,14 +123,14 @@ func _physics_process(delta: float) -> void:
 	if not power_node or not power_node.is_run_active:
 		return
 
-	if not animation_player.is_playing():
+	if model and model.has_method("play_anim") and not animation_player.is_playing():
 		model.play_anim("Idle")
 	# Set the power meter to reflect the current power
 	if power_meter:
 		power_meter.value = min(power_node.current_power, 100.0)
 	
 	# Update text to reflect current speed and score
-	speed_label.text = ("SPEED(MPS): " + str(int(current_speed)))
+	speed_label.text = ("SPEED(MPS): " + "%.1f" % current_speed)
 	score_label.text = ("SCORE: " + str(DatabaseManager.display_score()))
 	
 	# Update the row squares
@@ -225,14 +225,18 @@ func lose():
 
 ## Begins the sliding state
 func slide():
-	model.animation_player.stop()
+	if model and "animation_player" in model and model.animation_player:
+		model.animation_player.stop()
+		
 	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()
 	is_sliding = true
 	
 	# Play the animation and wait for it to finish
 	animation_player.play("Slide")
-	model.play_anim("Slide")
+	if model and model.has_method("play_anim"):
+		model.play_anim("Slide")
+		
 	await animation_player.animation_finished
 	
 	# Set sliding to false
