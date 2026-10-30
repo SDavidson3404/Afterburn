@@ -1,10 +1,9 @@
 [gd_scene format=3 uid="uid://bohcd45ewcaui"]
 
 [ext_resource type="Script" uid="uid://bpvo8cgevcra4" path="res://Player/player.gd" id="1_l8h54"]
+[ext_resource type="PackedScene" uid="uid://cxjb600ea3tbt" path="res://Player/Model + anims.tscn" id="2_4ntmi"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r8tgl"]
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_r8tgl"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
 
@@ -33,7 +32,7 @@ length = 0.001
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("MeshInstance3D:position")
+tracks/0/path = NodePath("CollisionShape3D:position")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -45,7 +44,7 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("CollisionShape3D:position")
+tracks/1/path = NodePath("CollisionShape3D:rotation")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
@@ -57,34 +56,10 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("MeshInstance3D:rotation")
+tracks/2/path = NodePath(".:visible")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector3(0, 0, 0)]
-}
-tracks/3/type = "value"
-tracks/3/imported = false
-tracks/3/enabled = true
-tracks/3/path = NodePath("CollisionShape3D:rotation")
-tracks/3/interp = 1
-tracks/3/loop_wrap = true
-tracks/3/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector3(0, 0, 0)]
-}
-tracks/4/type = "value"
-tracks/4/imported = false
-tracks/4/enabled = true
-tracks/4/path = NodePath(".:visible")
-tracks/4/interp = 1
-tracks/4/loop_wrap = true
-tracks/4/keys = {
 "times": PackedFloat32Array(0),
 "transitions": PackedFloat32Array(1),
 "update": 1,
@@ -97,7 +72,7 @@ length = 1.5
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("MeshInstance3D:position")
+tracks/0/path = NodePath("CollisionShape3D:position")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -109,38 +84,25 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("CollisionShape3D:position")
+tracks/1/path = NodePath("CollisionShape3D:rotation")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
-"times": PackedFloat32Array(0, 0.06666667, 0.13333334, 0.19999999, 1.0333333, 1.1533334, 1.2833333, 1.4733334),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1),
-"update": 0,
-"values": [Vector3(0, 0, 0), Vector3(0, -0.08226073, 0), Vector3(0, -0.5045166, 0), Vector3(0, -0.5446608, 0), Vector3(0, -0.5446608, 0), Vector3(0, -0.5045166, 0), Vector3(0, -0.08226073, 0), Vector3(0, 0, 0)]
-}
-tracks/2/type = "value"
-tracks/2/imported = false
-tracks/2/enabled = true
-tracks/2/path = NodePath("MeshInstance3D:rotation")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = {
-"times": PackedFloat32Array(0, 0.06666667, 0.13333334, 0.19999999, 1.0333333, 1.1533334, 1.2833333, 1.4733334),
-"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1),
-"update": 0,
-"values": [Vector3(0, 0, 0), Vector3(0.5235988, 0, 0), Vector3(1.0471976, 0, 0), Vector3(1.5707964, 0, 0), Vector3(1.5707964, 0, 0), Vector3(1.0471976, 0, 0), Vector3(0.5235988, 0, 0), Vector3(0, 0, 0)]
-}
-tracks/3/type = "value"
-tracks/3/imported = false
-tracks/3/enabled = true
-tracks/3/path = NodePath("CollisionShape3D:rotation")
-tracks/3/interp = 1
-tracks/3/loop_wrap = true
-tracks/3/keys = {
 "times": PackedFloat32Array(0, 0.06666667, 0.13333334, 0.19999999, 1.0333333, 1.1533334, 1.2750001, 1.4733334),
 "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1, 1),
 "update": 0,
 "values": [Vector3(0, 0, 0), Vector3(0.5235988, 0, 0), Vector3(1.0471976, 0, 0), Vector3(1.5707964, 0, 0), Vector3(1.5707964, 0, 0), Vector3(1.0471976, 0, 0), Vector3(0.5235988, 0, 0), Vector3(0, 0, 0)]
+}
+tracks/2/type = "method"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("..")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(),
+"transitions": PackedFloat32Array(),
+"values": []
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_btcbx"]
@@ -158,8 +120,8 @@ script = ExtResource("1_l8h54")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Body" unique_id=1107740713]
 shape = SubResource("CapsuleShape3D_r8tgl")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Body" unique_id=1886744333]
-mesh = SubResource("CapsuleMesh_r8tgl")
+[node name="Main Character Placeholder" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
+transform = Transform3D(-4.371139e-09, 0, 0.1, 0, 0.1, 0, -0.1, 0, -4.371139e-09, 0, 0, 0)
 
 [node name="Camera3D" type="Camera3D" parent="Body" unique_id=1996423927]
 transform = Transform3D(1, 0, 0, 0, 0.8660254, 0.50000006, 0, -0.50000006, 0.8660254, 0, 6, 5)
