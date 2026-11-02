@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bpvo8cgevcra4" path="res://Player/player.gd" id="1_l8h54"]
 [ext_resource type="PackedScene" uid="uid://cxjb600ea3tbt" path="res://Player/Model + anims.tscn" id="2_4ntmi"]
+[ext_resource type="Script" uid="uid://dixc45l43q38y" path="res://Player/debu_gui.gd" id="3_btcbx"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r8tgl"]
 
@@ -193,8 +194,26 @@ mesh = SubResource("CapsuleMesh_jp6wc")
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Body" unique_id=1048757398]
 libraries/ = SubResource("AnimationLibrary_btcbx")
 
-[node name="Timer" type="Timer" parent="." unique_id=241735877]
-wait_time = 3.0
-one_shot = true
+[node name="DEBUGui" type="Control" parent="Body" unique_id=604248087]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("3_btcbx")
 
-[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Body/DEBUGui" unique_id=614598089]
+layout_mode = 0
+offset_left = 6.0
+offset_top = 561.0
+offset_right = 255.0
+offset_bottom = 1096.0
+
+[node name="FPS" type="Label" parent="Body/DEBUGui/VBoxContainer" unique_id=1625983570]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "FPS:"
+
+[node name="Version" type="Label" parent="Body/DEBUGui/VBoxContainer" unique_id=2074832628]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Version:"

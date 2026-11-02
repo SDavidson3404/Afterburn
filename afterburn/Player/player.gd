@@ -215,13 +215,28 @@ func _on_power_invincibility_changed(is_invincible: bool) -> void:
 	
 	# Otherwise, make it translucent black
 	else: invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
+	
+## Time untill respawn
+var time_left: int = 3
 
 ## Runs on losing the game
-## As of right now only prints a message that the player lost
-func lose():
+func lose(): 
 	print("YOU LOST")
-	# Just an option, you could instead of creating a timer node, do "await get_tree().create_timer(3).timeout" then the next thing in the line after
+	$Timer/GameOverScreen.show()
+	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
+
+## Runs after the respawn timer ends
+func _on_timer_timeout() -> void:
+	time_left -= 1
+	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
+	
+	if time_left <= 0:
+		get_tree().reload_current_scene()
+
+func _on_button_pressed() -> void:
+	$Timer/GameOverScreen/Control/Button/Countdown.show()
 	timer.start()
+
 
 ## Begins the sliding state
 func slide():
@@ -246,6 +261,3 @@ func slide():
 func hit(): 
 	animation_player.stop()
 	animation_player.play("Hit_Wall")
-
-func _on_timer_timeout() -> void:
-	get_tree().reload_current_scene()
