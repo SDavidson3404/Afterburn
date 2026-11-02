@@ -12,8 +12,9 @@ signal dashing # A signal for when dashing
 @onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator" # An inidicator for when invincible
 @onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
-@onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animationplayer
+@onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
 @onready var timer: Timer = $Timer
+@onready var model: Node3D = get_node_or_null("Body/Main Character Placeholder")
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
 
@@ -35,6 +36,11 @@ var is_sliding: bool = false # A bool to show if you are currently sliding
 var is_dashing: bool = false # A bool to show if you are starting dashing
 var starting_run: bool = true # A bool to show if the run is starting
 
+# Dynamic stat multipliers overridden by gadgets (e.g., Hoverboard)
+var jump_velocity_multiplier: float = 1.0
+var gravity_multiplier: float = 1.0
+var dash_drain_multiplier: float = 1.0
+
 ## Runs when the scene is instanced or loaded in
 func _ready() -> void:
 	
@@ -44,6 +50,16 @@ func _ready() -> void:
 	# set the invincibility indicator
 	invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
 	
+	# Programmatically instantiate and attach GadgetUI node to player HUD
+	var gadget_ui_script = load("res://UI/gadget_ui.gd")
+	if gadget_ui_script and $Body/UI:
+		var gadget_ui = Node2D.new()
+		gadget_ui.set_script(gadget_ui_script)
+		gadget_ui.name = "GadgetUI"
+		gadget_ui.player = self
+		gadget_ui.power_node = power_node
+		$Body/UI.add_child(gadget_ui)
+	
 	# Capture the mouse
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -51,7 +67,7 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	
 	# If the player clicks, set the mouse to capture
-	if event.is_action_pressed("Click"): Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if event.is_action_pressed("Click") and power_node and power_node.is_run_active: Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
 	# If A is pressed, move left
 	if event.is_action_pressed("A"): move_left()
@@ -60,19 +76,23 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("D"): move_right()
 	
 	# If Shift is pressed and the player is not currently sliding and the player is on the floor, begin slide
-	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): slide()
+	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): 
+		slide()
 	
 	# If W is pressed and the current power is greater than or equal to the cost
-	if event.is_action_pressed("W"):
+	if event.is_action_pressed("W") and power_node:
 		if power_node.current_power >= power_node.dash_cost:
 			
 			# Set dashing to true and emit the dashing signal
 			is_dashing = true
 			dashing.emit()
 	
+	if event.is_action_pressed("Gadget"):
+		if power_node and power_node.has_method("try_use_loadout_gadget"):
+			power_node.try_use_loadout_gadget()
+	
 	# If ESC is pressed, set mouse to visible
 	if event.is_action_pressed("ESC"): Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 
 ## Moves the active row to the left one
 func move_left() -> void:
@@ -100,12 +120,18 @@ func update_target_row() -> void: current_row_offset = int(row_index) * 3
 
 ## Runs 60 times a second
 func _physics_process(delta: float) -> void:
+	if not power_node or not power_node.is_run_active:
+		return
+
+	if model and model.has_method("play_anim") and not animation_player.is_playing():
+		model.play_anim("Idle")
 	# Set the power meter to reflect the current power
-	power_meter.value = power_node.current_power
+	if power_meter:
+		power_meter.value = min(power_node.current_power, 100.0)
 	
 	# Update text to reflect current speed and score
-	speed_label.text = ("SPEED(MPS): " + str(int(current_speed)))
-	score_label.text = ("SCORE: " + str(score))
+	speed_label.text = ("SPEED(MPS): " + "%.1f" % current_speed)
+	score_label.text = ("SCORE: " + str(DatabaseManager.display_score()))
 	
 	# Update the row squares
 	update_row_square()
@@ -126,7 +152,12 @@ func _physics_process(delta: float) -> void:
 	
 	# If neither are true, change the speed towards the current speed in power by 10 MPS/s
 	else:
-		body.velocity.z = move_toward(body.velocity.z, -power_node.current_speed, DASH_DRAIN_RATE * delta)
+		var target_vel_z: float = -power_node.current_speed
+		if body.velocity.z < target_vel_z:
+			var active_drain_rate: float = DASH_DRAIN_RATE * dash_drain_multiplier
+			body.velocity.z = move_toward(body.velocity.z, target_vel_z, active_drain_rate * delta)
+		else:
+			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
 	
 	# Set the current speed to the forward velocity of the body
 	current_speed = -body.velocity.z
@@ -141,14 +172,15 @@ func _physics_process(delta: float) -> void:
 		if is_sliding:
 			if animation_player.current_animation == "Slide":
 				animation_player.stop()
+				
 			is_sliding = false
 		
 		# Apply jump velocity
-		body.velocity.y += JUMP_VELOCITY
+		body.velocity.y += (JUMP_VELOCITY * jump_velocity_multiplier)
 	
 	# If player is not on floor, apply gravity
 	if not body.is_on_floor():
-		body.velocity.y -= GRAVITY * delta
+		body.velocity.y -= (GRAVITY * gravity_multiplier) * delta
 	
 	# Move the body according to the set velocities
 	body.move_and_slide()
@@ -183,23 +215,43 @@ func _on_power_invincibility_changed(is_invincible: bool) -> void:
 	
 	# Otherwise, make it translucent black
 	else: invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
+	
+## Time untill respawn
+var time_left: int = 3
 
 ## Runs on losing the game
-## As of right now only prints a message that the player lost
-func lose():
+func lose(): 
 	print("YOU LOST")
-	# Just an option, you could instead of creating a timer node, do "await get_tree().create_timer(3).timeout" then the next thing in the line after
+	$Timer/GameOverScreen.show()
+	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
+
+## Runs after the respawn timer ends
+func _on_timer_timeout() -> void:
+	time_left -= 1
+	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
+	
+	if time_left <= 0:
+		get_tree().reload_current_scene()
+
+func _on_button_pressed() -> void:
+	$Timer/GameOverScreen/Control/Button/Countdown.show()
 	timer.start()
+
 
 ## Begins the sliding state
 func slide():
-	
+	if model and "animation_player" in model and model.animation_player:
+		model.animation_player.stop()
+		
 	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()
 	is_sliding = true
 	
 	# Play the animation and wait for it to finish
 	animation_player.play("Slide")
+	if model and model.has_method("play_anim"):
+		model.play_anim("Slide")
+		
 	await animation_player.animation_finished
 	
 	# Set sliding to false
@@ -209,6 +261,3 @@ func slide():
 func hit(): 
 	animation_player.stop()
 	animation_player.play("Hit_Wall")
-
-func _on_timer_timeout() -> void:
-	get_tree().reload_current_scene()
