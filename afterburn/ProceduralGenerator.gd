@@ -25,6 +25,10 @@ const DIST_TO_SIDE: float = 9.5 # The distance to the side of the road from the 
 const LEFT_ANGLE: float = 90.0  # The left side's angle to put the things on the side at
 const RIGHT_ANGLE: float = -90.0 # The right side's angle to put the things on the side at
 
+# Safe camera frustum despawn buffer distances
+const ROW_DESPAWN_OFFSET: float = 25.0
+const ROAD_DESPAWN_OFFSET: float = 40.0
+
 # Arrays to choose from for spawning
 var roads_to_spawn: Array = [STREET_TEMPLATE1] # Possible roads to spawn
 var side_to_spawn: Array = [BUILDING1] # Possible things to spawn on the sides
@@ -32,7 +36,6 @@ var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obs
 
 # Nodes
 @onready var starting_street: street = $Roads/StreetTemplate # The starting street
-@onready var in_road: Node3D = $In_Road # The parent node of all things in the road
 @onready var roads: Node3D = $Roads # The node all roads are under
 @onready var power: Node = $Power # The power controller
 @onready var row_detector: Area3D = $Row_Detector # The thing that detects if you passed the row
@@ -41,19 +44,14 @@ var obstacles_to_spawn: Array = [JUMP_OBSTACLE, WALL, SLIDE_BEAM] # Possible obs
 @export var player: Player # The player
 
 # Exported variables
-@export var obstacle_min_reaction_time: float = 0.5 # The minimum reaction time for obstacles
-@export var obstacle_max_reaction_time: float = 1.0 # The maximum reaction time for obstacles
-@export var obstacle_speed_difference: float = 5.0 # The difference in speed between the crystal spawner and the obstacle spawner
 @export var percentage_obstacle_spawned: int = 50 # the percentage change for each obstacle to be spawned
 
 # Variables
-var current_road_count: int = 1 # The current amount of roads currently existing
 var set_up: bool = false # A variable for if the rows have been set up
 var road_1: street # The road the player is on
 var road_2: street # The next road to be entered
 var road_3: street # The road to be loaded upon entering next road
 var row_count: int = 0 # The amount of rows currently in the game
-var rows_passed: int = 0 # The amount of rows the player has passed
 var current_rows: Array = [] # The current rows in existance
 var row_to_free # The row that will be freed when you pass a row
 
@@ -62,15 +60,12 @@ var row_to_free # The row that will be freed when you pass a row
 ## Connects the starting street signal to the method.
 ## Runs on startup
 func _ready() -> void:
-	
 	# Set road 1 to starting street
 	road_1 = starting_street
+	populate_side_props(road_1)
 	
-	# Connect the entered signal as a one shot
-	starting_street.entered.connect(enter, CONNECT_ONE_SHOT)
-	
-	# Start the run in the power controller 
-	power.start_run()
+	road_2 = create_next_road(road_1)
+	road_3 = create_next_road(road_2)
 	
 	# while there is less than 15 rows, summon a row of obstacles
 	while current_rows.size() < 15:
@@ -81,256 +76,194 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if row_count < 15:
-		summon_row_obstacles()
+	if not is_instance_valid(player) or not player.body:
+		return
 
-## Spawns the roads and buildings on the links.
-## Function runs to enter road
-func enter(street_node: street):
-	
-	# Create a variable for the distance of the current object
-	var distance_down_road: int = MIN_LOCAL_DIST
-	
-	# While loop for when the distance down the road is less than 300
-	while distance_down_road < 300:
-		
-		# Summon a side object both for the right and left
-		var current_left_spawn = summon_side(street_node)
-		var current_right_spawn = summon_side(street_node)
-		
-		# Set the position of both current spawns
-		current_left_spawn.position = Vector3(-DIST_TO_SIDE, 0.0, -distance_down_road)
-		current_right_spawn.position = Vector3(DIST_TO_SIDE, 0.0, -distance_down_road)
-		
-		# Set the rotation of both current spawns
-		current_left_spawn.global_rotation.y = deg_to_rad(LEFT_ANGLE)
-		current_right_spawn.global_rotation.y = deg_to_rad(RIGHT_ANGLE)
-		
-		# Add the distance of the object to the distance down road variable
-		distance_down_road += DIST_BETWEEN_SIDE_OBJECTS
-	
-	# Summon a road
-	var current_road_spawn = summon_road()
-	
-	# Set the position of the current road
-	current_road_spawn.global_position = street_node.end_link.global_position
-	
-	# Up the road count
-	current_road_count += 1
-	
-	# Update the road variables based on the current road
-	match street_node:
-		road_1:
-			road_2 = current_road_spawn
-		road_2:
-			road_3 = current_road_spawn
-	
-	# If current road count is 2 and road_2 exists
-	if is_instance_valid(starting_street) and current_road_count < 3:
-		
-		# Run this method for the new road
-		enter(road_2)
+	var player_z: float = player.body.global_position.z
 
-## Used to connect the obstacle's signal to the method
-func connect_obstacle(obstacle): obstacle.body_entered.connect(body_entered)
+	# Obstacle queue advancing loop: Flushes all passed rows even during high-speed frame spikes
+	while not current_rows.is_empty():
+		var front_row_z: float = current_rows.front().global_position.z
+		if player_z < (front_row_z - ROW_DESPAWN_OFFSET):
+			_advance_row_queue()
+		else:
+			break
 
-## Runs on body entering.
-## Connects to obstacles which can be hit
-func body_entered(body: Node3D):
-	
-	# If the body is the player
-	if body.is_in_group("Player"):
-		
-		# Run the obstacle hit method in the power controller and emit the signal
-		power.obstacle_hit()
-		Wall_Hit.emit()
+	# Seamless road recycling: Trigger after player is 40m past road_2 start
+	if is_instance_valid(road_2) and player_z < (road_2.global_position.z - ROAD_DESPAWN_OFFSET):
+		advance_road_queue()
+
 
 ## Removes old roads, buildings, and obstacles. 
 ## Run to disable the previous area
-func disable(not_disable: street):
-	
-	# For loop for the children of the roads parent node
-	for child in roads.get_children():
-		# If child is not the entered road or the third road,
-		# Get the children of the child node and remove them
-		if child != not_disable and child != road_3:
-			# Remove the child node
-			child.queue_free()
-	
-	# Update the roads
+func advance_road_queue() -> void:
+	if is_instance_valid(road_1):
+		road_1.queue_free()
+
 	road_1 = road_2
 	road_2 = road_3
-	road_3 = null
-	
-	# Up the road count
-	current_road_count -= 1
-	
-	# If the road is valid, then run enter method
-	if is_instance_valid(not_disable) and is_instance_valid(road_2):
-		enter(road_2)
+	road_3 = create_next_road(road_2)
+
+
+## Spawns the roads and buildings on the links.
+## Function runs to enter road
+func create_next_road(street_node: street) -> street:
+	var new_road = summon_road()
+	new_road.global_position = street_node.end_link.global_position
+	populate_side_props(new_road)
+	return new_road
+
+
+func populate_side_props(street_node: street) -> void:
+	var distance_down_road: int = MIN_LOCAL_DIST
+	while distance_down_road < 300:
+		var current_left_spawn = summon_side(street_node)
+		var current_right_spawn = summon_side(street_node)
+		
+		current_left_spawn.position = Vector3(-DIST_TO_SIDE, 0.0, -distance_down_road)
+		current_right_spawn.position = Vector3(DIST_TO_SIDE, 0.0, -distance_down_road)
+		current_left_spawn.global_rotation.y = deg_to_rad(LEFT_ANGLE)
+		current_right_spawn.global_rotation.y = deg_to_rad(RIGHT_ANGLE)
+		
+		distance_down_road += DIST_BETWEEN_SIDE_OBJECTS
+
+
+## Used to connect the obstacle's signal to the method
+func connect_obstacle(obstacle: Node3D) -> void:
+	obstacle.add_to_group("Obstacles")
+	if obstacle.has_signal("body_entered"):
+		obstacle.body_entered.connect(body_entered)
+
+
+## Runs on body entering.
+## Connects to obstacles which can be hit
+func body_entered(body: Node3D) -> void:
+	if body.is_in_group("Player"):
+		power.obstacle_hit()
+		Wall_Hit.emit()
+
 
 ## Summons a row of obstacles
-func summon_row_obstacles():
-	# Create necessary variables
+func summon_row_obstacles() -> void:
 	var taken_rows: Array = []
 	var wall_spawns: Array = []
 	var wall_count: int = 0
-	var row_z_offset: Vector3
 	
-	# Create a node to reference the row z point
-	var row_reference = Node3D.new()
-	
-	# Up the row count
 	row_count += 1
-	
-	# Update the name to reflect which row it is
+	var row_reference = Node3D.new()
 	row_reference.name = "Row" + str(row_count)
-	
-	# Add it as a child of the obstacles parent node
 	obstacles.add_child(row_reference)
+
+	var basis_node: Node3D = player if not set_up else current_rows.back()
+	var basis_z: float = basis_node.global_position.z if is_instance_valid(basis_node) else 0.0
+	var spawn_dist: float = find_optimal_distance()
+	var row_z: float = basis_z - spawn_dist
+
+	row_reference.global_position = Vector3(0.0, 0.0, row_z)
+	current_rows.append(row_reference)
+	set_up = true
 	
 	# For loop for each row index
 	for num in [-2, -1, 0, 1, 2]:
-		
-		# Essencially flip a coin
 		if randi_range(1, 100) <= percentage_obstacle_spawned:
-			
-			# If all five rows are taken, end the method
 			if taken_rows.size() >= 5:
-				return
+				break
 			
-			# Create and instance an obstacle of a random type
-			var obstacle = obstacles_to_spawn.pick_random()
-			var obstacle_instance = obstacle.instantiate()
+			var obstacle_packed = obstacles_to_spawn.pick_random()
+			var obstacle_instance = obstacle_packed.instantiate() as Obstacle
 			
-			# Add it as a child and connect its signal
+			var available_rows: Array = []
+			for r in obstacle_instance.possible_main_rows:
+				if not (r in taken_rows):
+					available_rows.append(r)
+			
+			if available_rows.is_empty():
+				obstacle_instance.queue_free()
+				continue
+			
 			row_reference.add_child(obstacle_instance)
 			connect_obstacle(obstacle_instance)
 			
-			# Select the main row of the possible rows for the obstacle
-			var main_row = obstacle_instance.possible_main_rows.pick_random()
-			
-			# Loop to select a new main row that continues if the row is taken and reselects one
-			var loop_count: int = 0
-			while main_row in taken_rows:
-				if loop_count <= 10:
-					loop_count += 1
-					main_row = obstacle_instance.possible_main_rows.pick_random()
-				else:
-					return
-			
-			# Save the current row being messed with starting with the main row
+			var main_row = available_rows.pick_random()
 			var current_row: int = main_row
-			
-			# Append the row to the taken rows array
 			taken_rows.append(current_row)
 			
-			# If the first row is not set up, find the z offset based on the player's position
-			if not set_up:
-				row_z_offset = place_obstacle(num, player)
+			for row_num in obstacle_instance.Row_Count - 1:
+				if obstacle_instance.direction_stretched == "Right":
+					current_row += 1
+				elif obstacle_instance.direction_stretched == "Left":
+					current_row -= 1
+				taken_rows.append(current_row)
 			
-			# If it is set up, get the offset based on the back row
-			else:
-				row_z_offset = place_obstacle(num, current_rows.back())
-			
-			# Place the obstacle in its row
-			
-			obstacle_instance.global_position.x = row_z_offset.x
+			obstacle_instance.position.x = num * 3.0
 			
 			# Detect the number of walls and put it into the wall count variable
 			if detect_walls(obstacle_instance):
 				wall_count += 1
+				wall_spawns.append(obstacle_instance)
 	
 	# If the wall count is 5 or more, pick a random one and delete it
-	if wall_count >= 5:
+	if wall_count >= 5 and not wall_spawns.is_empty():
 		var to_free = wall_spawns.pick_random()
-		to_free.queue_free()
-	
-	# If the offset is chosen, set the row's position to the offset
-	if row_z_offset:
-		row_reference.global_position = Vector3(0.0, 0.0, row_z_offset.z)
-		
-		# Append it into the current rows and set set_up to be true
-		current_rows.append(row_reference)
-		set_up = true
+		if is_instance_valid(to_free):
+			to_free.queue_free()
+
 
 ## Detects if the given obstacle is a wall
 func detect_walls(obstacle: Obstacle):
-	# If you cannot dodge the obstacle, return true
 	if obstacle.dodge_capabilities == "False":
 		return true
 
-## Gets the position based on the basis point and the row index
-func place_obstacle(row_index: int, basis_z):
-	# Get the optimal distance
-	var dist = find_optimal_distance()
-	
-	# Get the z offset
-	var z_offset: float = basis_z.global_position.z - dist
-	
-	# Return the Vector3 with the row index times 3, and the offset
-	return Vector3(row_index * 3, 0.0, z_offset)
-
 
 ## Finds the optimal distance for an obstacle
-func find_optimal_distance():
-	# Get the player's speed
-	var clamped_speed = crystal_spawner._get_clamped_speed()
-	
-	# Remap the speed from a range of base speed to max speed to a range of max reaction time to min reaction time
-	var reaction_time = remap(clamped_speed, crystal_spawner.base_speed, crystal_spawner.max_speed, obstacle_max_reaction_time, obstacle_min_reaction_time)
-	
-	# Return the product of the speed and reaction time
-	return clamped_speed * reaction_time
+func find_optimal_distance() -> float:
+	if not power:
+		return 22.5
+
+	var base_spd: float = power.base_speed if "base_speed" in power else 15.0
+	var max_spd: float = power.max_speed if "max_speed" in power else 343.0
+	var target_spd: float = power.target_speed if "target_speed" in power else base_spd
+
+	var clamped_spd: float = clampf(target_spd, base_spd, max_spd)
+
+	var base_rate: float = 1.0 / 1.50
+	var max_rate: float = base_rate * 12.0
+
+	var current_rate: float = remap(clamped_spd, base_spd, max_spd, base_rate, max_rate)
+	return clamped_spd / current_rate
+
 
 ## Summons a road and returns said road to later be put in its place
-func summon_road():
-	
-	# Pick a random road and instance it
-	var road = roads_to_spawn.pick_random()
-	var road_spawn = road.instantiate()
-	
-	# Add it as a child and connect the entered signal
+func summon_road() -> street:
+	var road_spawn = roads_to_spawn.pick_random().instantiate() as street
 	roads.add_child(road_spawn)
-	road_spawn.entered.connect(disable)
-	
-	# Return the road to be placed later
 	return road_spawn
 
 
 ## Summons something to go on the side of the road, such as buildings
-func summon_side(road: street):
-	
-	# Pick a random thing to spawn and instance it
-	var side = side_to_spawn.pick_random()
-	var side_spawn = side.instantiate()
-	
-	# Add it as a child of the given road
-	road.add_child(side_spawn)
-	
-	# Return the side object to be placed later
+func summon_side(road_node: street) -> Node3D:
+	var side_spawn = side_to_spawn.pick_random().instantiate() as Node3D
+	road_node.add_child(side_spawn)
 	return side_spawn
+
 
 ## Runs what happens when running into the area3D to detect when the player passes a row
 func _on_row_detector_body_entered(body: Node3D) -> void:
-	# If the body is in the player group
 	if body.is_in_group("Player"):
-		# If the row to free exists, delete it
-		if is_instance_valid(row_to_free):
-			row_to_free.queue_free()
-		
-		# Set row to free to the passed row
-		row_to_free = current_rows.front()
-		
-		# Remove the passed row from current rows
-		current_rows.erase(current_rows.front())
-		
-		
-		# Summon a new row of obstacles
-		summon_row_obstacles()
-		
-		# Place the area3D to the next row
+		_advance_row_queue()
+
+
+func _advance_row_queue() -> void:
+	if current_rows.is_empty():
+		return
+	if is_instance_valid(row_to_free):
+		row_to_free.queue_free()
+	row_to_free = current_rows.pop_front()
+	summon_row_obstacles()
+	if not current_rows.is_empty():
 		place_Area3D(current_rows.front().global_position.z)
 
+
 ## Places the area3D's global_position to the given variable
-func place_Area3D(z_loc: float): row_detector.global_position.z = z_loc
+func place_Area3D(z_loc: float) -> void:
+	row_detector.global_position.z = z_loc

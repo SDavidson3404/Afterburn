@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dvcxq72vgo00m"]
+
+[ext_resource type="PackedScene" uid="uid://dd3d4brupla2b" path="res://Models/Skateboard.blend" id="1_f4bti"]
+
+[node name="Skateboard" unique_id=772628565 instance=ExtResource("1_f4bti")]

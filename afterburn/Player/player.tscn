@@ -2,8 +2,29 @@
 
 [ext_resource type="Script" uid="uid://bpvo8cgevcra4" path="res://Player/player.gd" id="1_l8h54"]
 [ext_resource type="PackedScene" uid="uid://cxjb600ea3tbt" path="res://Player/Model + anims.tscn" id="2_4ntmi"]
+[ext_resource type="Script" uid="uid://dixc45l43q38y" path="res://Player/debu_gui.gd" id="3_btcbx"]
+[ext_resource type="PackedScene" uid="uid://dvcxq72vgo00m" path="res://Player/skateboard_model.tscn" id="3_gwnis"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r8tgl"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ygn46"]
+albedo_color = Color(1, 0, 0, 1)
+emission_enabled = true
+emission = Color(1, 0, 0, 1)
+emission_energy_multiplier = 7.68
+billboard_mode = 2
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_1k3a8"]
+emission_shape = 1
+emission_sphere_radius = 1.0
+use_rotation_3d = true
+rotation_3d_min = Vector3(0, 0, 0)
+rotation_3d_max = Vector3(0, 0, 0)
+gravity = Vector3(0, 0, 60)
+
+[sub_resource type="QuadMesh" id="QuadMesh_her67"]
+size = Vector2(0.25, 0.25)
+orientation = 1
 
 [sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
 
@@ -123,6 +144,21 @@ shape = SubResource("CapsuleShape3D_r8tgl")
 [node name="Main Character Placeholder" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
 transform = Transform3D(-4.371139e-09, 0, 0.1, 0, 0.1, 0, -0.1, 0, -4.371139e-09, 0, 0, 0)
 
+[node name="Skateboard" parent="Body" unique_id=772628565 instance=ExtResource("3_gwnis")]
+transform = Transform3D(-6.556708e-09, 0, 0.14999999, 0, 0.14999999, 0, -0.14999999, 0, -6.556708e-09, 0, -0.88649315, 0.046236813)
+
+[node name="FireParticles" type="Node3D" parent="Body" unique_id=707288902]
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="Body/FireParticles" unique_id=1792412378]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.7489253, 1.2408236)
+material_override = SubResource("StandardMaterial3D_ygn46")
+amount = 1
+sub_emitter = NodePath(".")
+lifetime = 0.34
+explosiveness = 0.4
+process_material = SubResource("ParticleProcessMaterial_1k3a8")
+draw_pass_1 = SubResource("QuadMesh_her67")
+
 [node name="Camera3D" type="Camera3D" parent="Body" unique_id=1996423927]
 transform = Transform3D(1, 0, 0, 0, 0.8660254, 0.50000006, 0, -0.50000006, 0.8660254, 0, 6, 5)
 
@@ -193,8 +229,26 @@ mesh = SubResource("CapsuleMesh_jp6wc")
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Body" unique_id=1048757398]
 libraries/ = SubResource("AnimationLibrary_btcbx")
 
-[node name="Timer" type="Timer" parent="." unique_id=241735877]
-wait_time = 3.0
-one_shot = true
+[node name="DEBUGui" type="Control" parent="Body" unique_id=604248087]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("3_btcbx")
 
-[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Body/DEBUGui" unique_id=614598089]
+layout_mode = 0
+offset_left = 6.0
+offset_top = 561.0
+offset_right = 255.0
+offset_bottom = 1096.0
+
+[node name="FPS" type="Label" parent="Body/DEBUGui/VBoxContainer" unique_id=1625983570]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "FPS:"
+
+[node name="Version" type="Label" parent="Body/DEBUGui/VBoxContainer" unique_id=2074832628]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Version:"
