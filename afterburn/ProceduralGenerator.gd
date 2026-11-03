@@ -126,7 +126,8 @@ func _evaluate_obstacle_dodges(player_z: float) -> void:
 			var player_x: float = player.body.global_position.x
 			var target_obstacle: Obstacle = _find_passed_obstacle_in_row(row, player_x)
 			if target_obstacle:
-				if target_obstacle.dodge_capabilities == "Jump" and row.get_meta("used_jump", false):
+				# Award jump dodge for both standard "Jump" obstacles and cleared "False" obstacles (Walls cleared with Hoverboard)
+				if (target_obstacle.dodge_capabilities == "Jump" or target_obstacle.dodge_capabilities == "False") and row.get_meta("used_jump", false):
 					player.register_dodge("jump")
 				elif target_obstacle.dodge_capabilities == "Slide" and row.get_meta("used_slide", false):
 					player.register_dodge("slide")
