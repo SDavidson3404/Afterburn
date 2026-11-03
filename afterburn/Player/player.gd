@@ -24,7 +24,6 @@ const MAX_ROW_INDEX: int = 2 # The maximum row
 const JUMP_VELOCITY: float = 7.0 # The velocity of the jump
 const GRAVITY: float = 12.0 # The strength of gravity
 const STRAFE_SPEED: float = 15.0  # The speed of strafing
-const DASH_DRAIN_RATE: float = 10.0 # The rate at which the dash speed drains back to normal
 const dash_multiplier: float = 2.0 # The multiplier to the speed when dashing
 
 # Regular variables
@@ -40,6 +39,7 @@ var starting_run: bool = true # A bool to show if the run is starting
 var jump_velocity_multiplier: float = 1.0
 var gravity_multiplier: float = 1.0
 var dash_drain_multiplier: float = 1.0
+var dash_decel_rate: float = 0.0
 
 ## Runs when the scene is instanced or loaded in
 func _ready() -> void:
@@ -144,19 +144,31 @@ func _physics_process(delta: float) -> void:
 	if is_dashing:
 		body.velocity.z = -power_node.current_speed * dash_multiplier
 		is_dashing = false
+		dash_decel_rate = 0.0
 	
 	# Otherwise if you are starting the run, set the initial velocity and note that it was set up
 	elif starting_run:
 		body.velocity.z = -power_node.current_speed
 		starting_run = false
 	
-	# If neither are true, change the speed towards the current speed in power by 10 MPS/s
+	# If neither are true, change the speed towards the current speed in power
 	else:
 		var target_vel_z: float = -power_node.current_speed
-		if body.velocity.z < target_vel_z:
-			var active_drain_rate: float = DASH_DRAIN_RATE * dash_drain_multiplier
-			body.velocity.z = move_toward(body.velocity.z, target_vel_z, active_drain_rate * delta)
+		
+		# If coasting, let power.gd's coasting deceleration dictate player speed directly
+		if power_node and power_node.is_coasting:
+			dash_decel_rate = 0.0
+			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
+		elif body.velocity.z < target_vel_z:
+			# Calculate required deceleration rate to reach target speed in exactly 1.0 second
+			if dash_decel_rate <= 0.0:
+				var excess_speed: float = abs(body.velocity.z - target_vel_z)
+				var decel_duration: float = 1.0 / maxf(dash_drain_multiplier, 0.01)
+				dash_decel_rate = excess_speed / maxf(decel_duration, 0.01)
+			
+			body.velocity.z = move_toward(body.velocity.z, target_vel_z, dash_decel_rate * delta)
 		else:
+			dash_decel_rate = 0.0
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
 	
 	# Set the current speed to the forward velocity of the body

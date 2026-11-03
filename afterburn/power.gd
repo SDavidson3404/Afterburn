@@ -35,9 +35,6 @@ signal game_over_triggered
 ## Temporary invincibility duration granted when collecting crystals during speed catch-up.
 @export var crystal_invincibility_duration: float = 3.0
 
-## Suit power cost subtracted when executing a slide dodge maneuver.
-@export var slide_cost: int = 10
-
 ## Suit power cost subtracted when executing a dash speed boost.
 @export var dash_cost: int = 25
 
@@ -63,7 +60,7 @@ var has_overdriven_rocket: bool = false
 var is_overdrive_surge: bool = false
 var is_overcharged: bool = false
 var overdrive_rocket_timer: float = 0.0
-var overdrive_rocket_max_duration: float = 40.0
+var overdrive_rocket_max_duration: float = 50.0
 
 # Armor interception registry and runtime state trackers
 var active_armor_layers: Array = []
@@ -116,8 +113,6 @@ func start_run() -> void:
 	
 	# Bind player action signals to power drain callbacks
 	if player:
-		if not player.sliding.is_connected(slide):
-			player.sliding.connect(slide)
 		if not player.dashing.is_connected(dash):
 			player.dashing.connect(dash)
 
@@ -378,12 +373,6 @@ func end_run() -> void:
 	is_invincible = false
 	current_speed = 0.0
 	game_over_triggered.emit()
-
-
-## Power drain callback invoked when player slides.
-func slide():
-	current_power = clampf(current_power - slide_cost, 0.0, max_power)
-	power_changed.emit(current_power, max_power)
 
 
 ## Power drain callback invoked when player dashes.
