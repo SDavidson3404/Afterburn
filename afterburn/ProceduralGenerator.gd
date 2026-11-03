@@ -106,7 +106,7 @@ func _evaluate_obstacle_dodges(player_z: float) -> void:
 		var row_z: float = row.global_position.z
 
 		# Record if a jump or slide maneuver was active while crossing inside the row bounds
-		if player_z <= (row_z + 1.5) and player_z >= (row_z - 1.5):
+		if player_z <= (row_z + 3.0) and player_z >= (row_z - 3.0):
 			if player.is_jumping_maneuver or not player.body.is_on_floor():
 				row.set_meta("used_jump", true)
 			if player.is_sliding:
@@ -313,7 +313,7 @@ func summon_side(road_node: street) -> Node3D:
 ## Runs what happens when running into the area3D to detect when the player passes a row
 func _on_row_detector_body_entered(body: Node3D) -> void:
 	if body.is_in_group("Player"):
-		_advance_row_queue()
+		pass
 
 
 func _advance_row_queue() -> void:
