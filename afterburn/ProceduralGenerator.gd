@@ -103,11 +103,20 @@ func _evaluate_obstacle_dodges(player_z: float) -> void:
 		if not is_instance_valid(row):
 			continue
 
+		var row_z: float = row.global_position.z
+
+		# Record if a jump or slide maneuver was active while crossing inside the row bounds
+		if player_z <= (row_z + 1.5) and player_z >= (row_z - 1.5):
+			if player.is_jumping_maneuver or not player.body.is_on_floor():
+				row.set_meta("used_jump", true)
+			if player.is_sliding:
+				row.set_meta("used_slide", true)
+
 		if row.get_meta("dodged", false):
 			continue
 
 		# Completely pass obstacle row check (z position past obstacle back edge)
-		if player_z < (row.global_position.z - 1.5):
+		if player_z < (row_z - 1.5):
 			row.set_meta("dodged", true)
 
 			# If player collided with any obstacle in this row, no points awarded
@@ -117,9 +126,9 @@ func _evaluate_obstacle_dodges(player_z: float) -> void:
 			var player_x: float = player.body.global_position.x
 			var target_obstacle: Obstacle = _find_passed_obstacle_in_row(row, player_x)
 			if target_obstacle:
-				if target_obstacle.dodge_capabilities == "Jump" and player.is_jumping_maneuver:
+				if target_obstacle.dodge_capabilities == "Jump" and row.get_meta("used_jump", false):
 					player.register_dodge("jump")
-				elif target_obstacle.dodge_capabilities == "Slide" and player.is_sliding:
+				elif target_obstacle.dodge_capabilities == "Slide" and row.get_meta("used_slide", false):
 					player.register_dodge("slide")
 
 
@@ -204,6 +213,8 @@ func summon_row_obstacles() -> void:
 	row_reference.name = "Row" + str(row_count)
 	row_reference.set_meta("hit", false)
 	row_reference.set_meta("dodged", false)
+	row_reference.set_meta("used_jump", false)
+	row_reference.set_meta("used_slide", false)
 	obstacles.add_child(row_reference)
 
 	var basis_node: Node3D = player if not set_up else current_rows.back()
