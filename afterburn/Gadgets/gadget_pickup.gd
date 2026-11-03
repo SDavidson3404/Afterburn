@@ -76,6 +76,8 @@ func _on_body_entered(body: Node3D) -> void:
 	if player_node and player_node.is_in_group("Player"):
 		_is_collected = true
 		_trigger_pickup_effect(player_node)
+		if get_node_or_null("/root/DatabaseManager"):
+			DatabaseManager.add_gadget()
 		queue_free()
 
 

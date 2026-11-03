@@ -35,6 +35,11 @@ var is_sliding: bool = false # A bool to show if you are currently sliding
 var is_dashing: bool = false # A bool to show if you are starting dashing
 var starting_run: bool = true # A bool to show if the run is starting
 
+# Dodge maneuver trackers
+var is_jumping_maneuver: bool = false
+var current_jump_dodge_count: int = 0
+var current_slide_dodge_count: int = 0
+
 # Dynamic stat multipliers overridden by gadgets (e.g., Hoverboard)
 var jump_velocity_multiplier: float = 1.0
 var gravity_multiplier: float = 1.0
@@ -139,8 +144,7 @@ func _physics_process(delta: float) -> void:
 	# Set sideways movement to 0
 	body.velocity.x = 0.0
 	
-	# If you are dashing, set the velocity to current speed of the power, 
-	# times the dash multiplier and set is dashing to false
+	# If you are dashing, set the velocity to current speed of the power, times the dash multiplier and set is dashing to false
 	if is_dashing:
 		body.velocity.z = -power_node.current_speed * dash_multiplier
 		is_dashing = false
@@ -186,16 +190,42 @@ func _physics_process(delta: float) -> void:
 				animation_player.stop()
 				
 			is_sliding = false
+			current_slide_dodge_count = 0
 		
-		# Apply jump velocity
+		# Apply jump velocity and start jump maneuver
 		body.velocity.y += (JUMP_VELOCITY * jump_velocity_multiplier)
+		is_jumping_maneuver = true
+		current_jump_dodge_count = 0
 	
-	# If player is not on floor, apply gravity
-	if not body.is_on_floor():
+	# Reset jump maneuver state upon touching floor
+	if body.is_on_floor():
+		if is_jumping_maneuver:
+			is_jumping_maneuver = false
+			current_jump_dodge_count = 0
+	else:
+		# If player is not on floor, apply gravity
 		body.velocity.y -= (GRAVITY * gravity_multiplier) * delta
 	
 	# Move the body according to the set velocities
 	body.move_and_slide()
+
+## Registers a dodge maneuver and awards compounding points (100, 200, 300...) per obstacle in current jump or slide.
+func register_dodge(dodge_type: String) -> void:
+	var points: int = 0
+	if dodge_type == "jump":
+		current_jump_dodge_count += 1
+		points = current_jump_dodge_count * 100
+	elif dodge_type == "slide":
+		current_slide_dodge_count += 1
+		points = current_slide_dodge_count * 100
+
+	if points > 0 and get_node_or_null("/root/DatabaseManager"):
+		DatabaseManager.add_dodge(dodge_type, points)
+
+## Resets maneuver dodge multipliers if player hits an obstacle.
+func cancel_dodge_maneuver() -> void:
+	current_jump_dodge_count = 0
+	current_slide_dodge_count = 0
 
 ## Updates the square representing the row you are in
 func update_row_square():
@@ -249,7 +279,6 @@ func _on_button_pressed() -> void:
 	$Timer/GameOverScreen/Control/Button/Countdown.show()
 	timer.start()
 
-
 ## Begins the sliding state
 func slide():
 	if model and "animation_player" in model and model.animation_player:
@@ -258,6 +287,7 @@ func slide():
 	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()
 	is_sliding = true
+	current_slide_dodge_count = 0
 	
 	# Play the animation and wait for it to finish
 	animation_player.play("Slide")
@@ -268,8 +298,10 @@ func slide():
 	
 	# Set sliding to false
 	is_sliding = false
+	current_slide_dodge_count = 0
 
 ## Runs the hit wall animation upon being called
-func hit(): 
+func hit():
+	cancel_dodge_maneuver()
 	animation_player.stop()
 	animation_player.play("Hit_Wall")

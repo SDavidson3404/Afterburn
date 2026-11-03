@@ -81,6 +81,9 @@ func _process(_delta: float) -> void:
 
 	var player_z: float = player.body.global_position.z
 
+	# Evaluate obstacle dodges for rows completely passed by player
+	_evaluate_obstacle_dodges(player_z)
+
 	# Obstacle queue advancing loop: Flushes all passed rows even during high-speed frame spikes
 	while not current_rows.is_empty():
 		var front_row_z: float = current_rows.front().global_position.z
@@ -92,6 +95,48 @@ func _process(_delta: float) -> void:
 	# Seamless road recycling: Trigger after player is 40m past road_2 start
 	if is_instance_valid(road_2) and player_z < (road_2.global_position.z - ROAD_DESPAWN_OFFSET):
 		advance_road_queue()
+
+
+## Evaluates active obstacle rows to award dodge points as soon as player completely passes them.
+func _evaluate_obstacle_dodges(player_z: float) -> void:
+	for row in current_rows:
+		if not is_instance_valid(row):
+			continue
+
+		if row.get_meta("dodged", false):
+			continue
+
+		# Completely pass obstacle row check (z position past obstacle back edge)
+		if player_z < (row.global_position.z - 1.5):
+			row.set_meta("dodged", true)
+
+			# If player collided with any obstacle in this row, no points awarded
+			if row.get_meta("hit", false):
+				continue
+
+			var player_x: float = player.body.global_position.x
+			var target_obstacle: Obstacle = _find_passed_obstacle_in_row(row, player_x)
+			if target_obstacle:
+				if target_obstacle.dodge_capabilities == "Jump" and player.is_jumping_maneuver:
+					player.register_dodge("jump")
+				elif target_obstacle.dodge_capabilities == "Slide" and player.is_sliding:
+					player.register_dodge("slide")
+
+
+## Helper finding if an obstacle in the row corresponds to player's track position.
+func _find_passed_obstacle_in_row(row: Node3D, player_x: float) -> Obstacle:
+	for child in row.get_children():
+		if child is Obstacle:
+			var min_x: float = child.global_position.x - 1.5
+			var max_x: float = child.global_position.x + 1.5
+			if child.direction_stretched == "Right":
+				max_x += (child.Row_Count - 1) * 3.0
+			elif child.direction_stretched == "Left":
+				min_x -= (child.Row_Count - 1) * 3.0
+
+			if player_x >= (min_x - 0.5) and player_x <= (max_x + 0.5):
+				return child
+	return null
 
 
 ## Removes old roads, buildings, and obstacles. 
@@ -128,17 +173,22 @@ func populate_side_props(street_node: street) -> void:
 		distance_down_road += DIST_BETWEEN_SIDE_OBJECTS
 
 
-## Used to connect the obstacle's signal to the method
-func connect_obstacle(obstacle: Node3D) -> void:
+## Used to connect the obstacle's signal and row reference to the collision callback
+func connect_obstacle(obstacle: Node3D, row_ref: Node3D) -> void:
 	obstacle.add_to_group("Obstacles")
+	obstacle.set_meta("row_ref", row_ref)
 	if obstacle.has_signal("body_entered"):
-		obstacle.body_entered.connect(body_entered)
+		obstacle.body_entered.connect(_on_obstacle_body_entered.bind(obstacle))
 
 
-## Runs on body entering.
-## Connects to obstacles which can be hit
-func body_entered(body: Node3D) -> void:
+## Runs on body entering an obstacle. Flags row hit status to prevent dodge points.
+func _on_obstacle_body_entered(body: Node3D, obstacle: Obstacle) -> void:
 	if body.is_in_group("Player"):
+		var row_ref = obstacle.get_meta("row_ref", null)
+		if is_instance_valid(row_ref):
+			row_ref.set_meta("hit", true)
+		if player and player.has_method("cancel_dodge_maneuver"):
+			player.cancel_dodge_maneuver()
 		power.obstacle_hit()
 		Wall_Hit.emit()
 
@@ -152,6 +202,8 @@ func summon_row_obstacles() -> void:
 	row_count += 1
 	var row_reference = Node3D.new()
 	row_reference.name = "Row" + str(row_count)
+	row_reference.set_meta("hit", false)
+	row_reference.set_meta("dodged", false)
 	obstacles.add_child(row_reference)
 
 	var basis_node: Node3D = player if not set_up else current_rows.back()
@@ -182,7 +234,7 @@ func summon_row_obstacles() -> void:
 				continue
 			
 			row_reference.add_child(obstacle_instance)
-			connect_obstacle(obstacle_instance)
+			connect_obstacle(obstacle_instance, row_reference)
 			
 			var main_row = available_rows.pick_random()
 			var current_row: int = main_row
