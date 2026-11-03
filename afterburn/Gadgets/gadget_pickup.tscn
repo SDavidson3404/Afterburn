@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://cx1kihp4k4g7r"]
+
+[ext_resource type="Script" uid="uid://bcpyh4cm0ghrr" path="res://Gadgets/gadget_pickup.gd" id="1_m6nkf"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_ni0ne"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iusrd"]
+shading_mode = 0
+albedo_color = Color(0.8980392, 0.2, 0.85490197, 1)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_pfmmc"]
+
+[node name="GadgetPickup" type="Area3D" unique_id=677913613]
+script = ExtResource("1_m6nkf")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=974241546]
+mesh = SubResource("SphereMesh_ni0ne")
+surface_material_override/0 = SubResource("StandardMaterial3D_iusrd")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=579536525]
+shape = SubResource("SphereShape3D_pfmmc")

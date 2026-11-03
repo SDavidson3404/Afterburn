@@ -2,6 +2,9 @@ extends collectible
 
 var spawner: Node = null
 
+func _ready() -> void:
+	add_to_group("Collectibles") # Enables magnet tracking
+
 ## Receives reference to the spawner upon instantiation
 func set_spawner(spawner_node: Node) -> void:
 	spawner = spawner_node
@@ -16,5 +19,3 @@ func pick_up_effect() -> void:
 	# Notify spawner to trigger power refill, invincibility, and schedule next spawn
 	if spawner and spawner.has_method("on_crystal_collected"):
 		spawner.on_crystal_collected()
-		
-	queue_free()

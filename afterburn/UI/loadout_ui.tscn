@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://dq8tr83phbqvk"]
+
+[ext_resource type="Script" uid="uid://jisccmvlh24" path="res://UI/loadout_ui.gd" id="1_8j8cs"]
+
+[node name="LoudoutUI" type="Control" unique_id=1704217928]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -1.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_8j8cs")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=432742767]
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer" unique_id=893051179]
+offset_left = -1.0
+offset_top = 1.0
+offset_right = 249.0
+offset_bottom = 151.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/PanelContainer" unique_id=1576458055]
+custom_minimum_size = Vector2(250, 150)
+layout_mode = 2
+
+[node name="GadgetOption" type="OptionButton" parent="CanvasLayer/PanelContainer/VBoxContainer" unique_id=433270164]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="CanvasLayer/PanelContainer/VBoxContainer" unique_id=724190010]
+unique_name_in_owner = true
+layout_mode = 2
+text = "START RUN
+"

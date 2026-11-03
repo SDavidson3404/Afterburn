@@ -3,7 +3,12 @@
 [ext_resource type="Script" uid="uid://dd8g3jlj8mecp" path="res://Collectibles/crystal.gd" id="1_2kwii"]
 [ext_resource type="PackedScene" uid="uid://s7vdp82ujmq7" path="res://Collectibles/collectible_template.tscn" id="1_lqwqg"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_l8h54"]
+emission_enabled = true
+emission = Color(0, 1, 1, 1)
+
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_2kwii"]
+material = SubResource("StandardMaterial3D_l8h54")
 height = 1.0
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_fnnny"]
