@@ -37,23 +37,22 @@ const GADGET_OPTIONS: Array[Dictionary] = [
 
 
 func _ready() -> void:
-	# Enable visible mouse cursor for menu interaction
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if has_node("CanvasLayer"):
 		$CanvasLayer.show()
 	show()
 
-	# Remove focus traps on menu elements
+	# Remove focus traps on UI elements
 	for element in [start_menu_button, stats_menu_button, exit_menu_button, confirm_start_button, back_from_gadget_button, back_from_stats_button, gadget_option]:
 		if element:
 			element.focus_mode = Control.FOCUS_NONE
 
-	# Populate gadget option dropdown
+	# Populate gadget options
 	gadget_option.clear()
 	for i in range(GADGET_OPTIONS.size()):
 		gadget_option.add_item(GADGET_OPTIONS[i]["name"], i)
 
-	# Connect button signals
+	# Connect signal listeners
 	start_menu_button.pressed.connect(_on_start_menu_button_pressed)
 	stats_menu_button.pressed.connect(_on_stats_menu_button_pressed)
 	exit_menu_button.pressed.connect(_on_exit_menu_button_pressed)
@@ -62,6 +61,13 @@ func _ready() -> void:
 	back_from_stats_button.pressed.connect(_show_main_menu)
 
 	_show_main_menu()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ESC"):
+		if gadget_panel.visible or stats_panel.visible:
+			_show_main_menu()
+			get_viewport().set_input_as_handled()
 
 
 func _show_main_menu() -> void:
@@ -110,28 +116,25 @@ func _update_lifetime_stats_display() -> void:
 		stats_label.text = "Database not connected."
 
 
-## Confirms loadout selection, instantiates gadget via factory, and begins the run.
 func _on_confirm_start_button_pressed() -> void:
 	if not power_node:
 		return
 
-	# Clean up previous gadget instance to prevent memory leaks across consecutive runs
+	# Free old gadget instance to prevent memory leaks
 	if power_node.selected_gadget:
 		power_node.selected_gadget.queue_free()
 		power_node.selected_gadget = null
 
-	# Lookup selected gadget ID from OptionButton dropdown state
-	var selected_idx: int = gadget_option.get_selected_id()
-	var gadget_id: String = GADGET_OPTIONS[selected_idx]["id"]
-	
-	# Instantiate gadget using the GadgetBase factory method if selected
-	if not gadget_id.is_empty():
-		var gadget_instance: GadgetBase = GadgetBase.create_by_id(gadget_id)
-		if gadget_instance:
-			power_node.add_child(gadget_instance)
-			power_node.selected_gadget = gadget_instance
+	var selected_idx: int = gadget_option.selected
+	if selected_idx >= 0 and selected_idx < GADGET_OPTIONS.size():
+		var gadget_id: String = GADGET_OPTIONS[selected_idx]["id"]
+		if not gadget_id.is_empty():
+			var gadget_instance: GadgetBase = GadgetBase.create_by_id(gadget_id)
+			if gadget_instance:
+				power_node.add_child(gadget_instance)
+				power_node.selected_gadget = gadget_instance
 
-	# Capture mouse cursor for gameplay controls, hide UI overlay, and start run
+	# Capture mouse and start run
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if has_node("CanvasLayer"):
 		$CanvasLayer.hide()
