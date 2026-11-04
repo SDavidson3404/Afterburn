@@ -151,6 +151,7 @@ func lifetime_stats() -> Dictionary:
 	SELECT
 		COUNT(*) AS total_runs,
 		COALESCE(MAX(total_score), 0) AS high_score,
+		COALESCE(SUM(total_score), 0) AS total_lifetime_score,
 		COALESCE(MAX(total_distance), 0) AS max_distance,
 		COALESCE(MAX(power_crystals), 0) AS max_crystals,
 		COALESCE(MAX(jump_obstacle + slide_obstacle), 0) AS max_dodges,

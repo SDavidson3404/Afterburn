@@ -106,10 +106,13 @@ func _update_lifetime_stats_display() -> void:
 		stats_label.text = (
 			"Total Runs: %d\n" % stats.get("total_runs", 0) +
 			"High Score: %d\n" % stats.get("high_score", 0) +
+			"Lifetime Score: %d\n" % stats.get("total_lifetime_score", 0) +
 			"Max Distance: %dm\n" % stats.get("max_distance", 0) +
 			"Total Distance: %dm\n" % stats.get("total_distance", 0) +
-			"Power Crystals: %d\n" % stats.get("total_crystals", 0) +
-			"Obstacles Dodged: %d\n" % stats.get("total_dodges", 0) +
+			"Max Crystals: %d\n" % stats.get("max_crystals", 0) +
+			"Total Crystals: %d\n" % stats.get("total_crystals", 0) +
+			"Max Dodges: %d\n" % stats.get("max_dodges", 0) +
+			"Total Dodges: %d\n" % stats.get("total_dodges", 0) +
 			"Gadgets Collected: %d" % stats.get("total_gadgets", 0)
 		)
 	else:
