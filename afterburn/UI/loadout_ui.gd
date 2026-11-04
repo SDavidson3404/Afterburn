@@ -1,18 +1,31 @@
-## Loadout menu interface script.
-## Handles pre-run gadget selection, dynamic UI population, memory cleanup, and seamless mouse input state transitions.
+## Main Menu and Loadout interface script.
+## Handles main menu navigation (Start, Stats, Exit), gadget selection, lifetime stat displays, and mouse state transitions.
 extends Control
 
 @export_category("Node References")
 ## Reference to the main power manager node responsible for tracking run state.
 @export var power_node: Node
 
-## Onready reference to the gadget dropdown selector menu.
+# Panel Containers
+@onready var main_menu_panel: PanelContainer = %MainMenuPanel
+@onready var gadget_panel: PanelContainer = %GadgetPanel
+@onready var stats_panel: PanelContainer = %StatsPanel
+
+# Main Menu Buttons
+@onready var start_menu_button: Button = %StartMenuButton
+@onready var stats_menu_button: Button = %StatsMenuButton
+@onready var exit_menu_button: Button = %ExitMenuButton
+
+# Gadget Selection Controls
 @onready var gadget_option: OptionButton = %GadgetOption
+@onready var confirm_start_button: Button = %ConfirmStartButton
+@onready var back_from_gadget_button: Button = %BackFromGadgetButton
 
-## Onready reference to the run start confirmation button.
-@onready var start_button: Button = %StartButton
+# Lifetime Stats Controls
+@onready var stats_label: Label = %StatsLabel
+@onready var back_from_stats_button: Button = %BackFromStatsButton
 
-## Registry array of dictionaries mapping display names to GadgetBase string IDs.
+## Registry mapping display names to GadgetBase string IDs.
 const GADGET_OPTIONS: Array[Dictionary] = [
 	{"name": "None (Standard Run)", "id": ""},
 	{"name": "Pulse Wave", "id": "pulse_wave"},
@@ -30,23 +43,75 @@ func _ready() -> void:
 		$CanvasLayer.show()
 	show()
 
-	# Configure element dimensions and disable keyboard focus traps
-	gadget_option.custom_minimum_size = Vector2(250, 40)
-	start_button.custom_minimum_size = Vector2(250, 40)
-	start_button.focus_mode = Control.FOCUS_NONE
-	gadget_option.focus_mode = Control.FOCUS_NONE
+	# Remove focus traps on menu elements
+	for element in [start_menu_button, stats_menu_button, exit_menu_button, confirm_start_button, back_from_gadget_button, back_from_stats_button, gadget_option]:
+		if element:
+			element.focus_mode = Control.FOCUS_NONE
 
-	# Populate OptionButton menu items dynamically from registry dictionary
+	# Populate gadget option dropdown
 	gadget_option.clear()
 	for i in range(GADGET_OPTIONS.size()):
 		gadget_option.add_item(GADGET_OPTIONS[i]["name"], i)
 
-	start_button.pressed.connect(_on_start_button_pressed)
+	# Connect button signals
+	start_menu_button.pressed.connect(_on_start_menu_button_pressed)
+	stats_menu_button.pressed.connect(_on_stats_menu_button_pressed)
+	exit_menu_button.pressed.connect(_on_exit_menu_button_pressed)
+	confirm_start_button.pressed.connect(_on_confirm_start_button_pressed)
+	back_from_gadget_button.pressed.connect(_show_main_menu)
+	back_from_stats_button.pressed.connect(_show_main_menu)
+
+	_show_main_menu()
+
+
+func _show_main_menu() -> void:
+	main_menu_panel.show()
+	gadget_panel.hide()
+	stats_panel.hide()
+
+
+func _on_start_menu_button_pressed() -> void:
+	main_menu_panel.hide()
+	gadget_panel.show()
+	stats_panel.hide()
+
+
+func _on_stats_menu_button_pressed() -> void:
+	_update_lifetime_stats_display()
+	main_menu_panel.hide()
+	gadget_panel.hide()
+	stats_panel.show()
+
+
+func _on_exit_menu_button_pressed() -> void:
+	get_tree().quit()
+
+
+func _update_lifetime_stats_display() -> void:
+	if not stats_label:
+		return
+
+	if get_node_or_null("/root/DatabaseManager"):
+		var stats: Dictionary = DatabaseManager.lifetime_stats()
+		if stats.is_empty():
+			stats_label.text = "No lifetime stats found."
+			return
+
+		stats_label.text = (
+			"Total Runs: %d\n" % stats.get("total_runs", 0) +
+			"High Score: %d\n" % stats.get("high_score", 0) +
+			"Max Distance: %dm\n" % stats.get("max_distance", 0) +
+			"Total Distance: %dm\n" % stats.get("total_distance", 0) +
+			"Power Crystals: %d\n" % stats.get("total_crystals", 0) +
+			"Obstacles Dodged: %d\n" % stats.get("total_dodges", 0) +
+			"Gadgets Collected: %d" % stats.get("total_gadgets", 0)
+		)
+	else:
+		stats_label.text = "Database not connected."
 
 
 ## Confirms loadout selection, instantiates gadget via factory, and begins the run.
-func _on_start_button_pressed() -> void:
-	start_button.release_focus()
+func _on_confirm_start_button_pressed() -> void:
 	if not power_node:
 		return
 

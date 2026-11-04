@@ -7,30 +7,130 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -1.0
-offset_bottom = -1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_8j8cs")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=432742767]
 
-[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer" unique_id=893051179]
-offset_left = -1.0
-offset_top = 1.0
-offset_right = 249.0
-offset_bottom = 151.0
+[node name="MainMenuPanel" type="PanelContainer" parent="CanvasLayer" unique_id=1849204718]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -120.0
+offset_right = 150.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/PanelContainer" unique_id=1576458055]
-custom_minimum_size = Vector2(250, 150)
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/MainMenuPanel" unique_id=1029384756]
+custom_minimum_size = Vector2(280, 220)
 layout_mode = 2
 
-[node name="GadgetOption" type="OptionButton" parent="CanvasLayer/PanelContainer/VBoxContainer" unique_id=433270164]
+[node name="TitleLabel" type="Label" parent="CanvasLayer/MainMenuPanel/VBoxContainer" unique_id=1293847561]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "MAIN MENU"
+horizontal_alignment = 1
+
+[node name="StartMenuButton" type="Button" parent="CanvasLayer/MainMenuPanel/VBoxContainer" unique_id=918273645]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "START"
+
+[node name="StatsMenuButton" type="Button" parent="CanvasLayer/MainMenuPanel/VBoxContainer" unique_id=817263544]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "STATS"
+
+[node name="ExitMenuButton" type="Button" parent="CanvasLayer/MainMenuPanel/VBoxContainer" unique_id=716253443]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "EXIT"
+
+[node name="GadgetPanel" type="PanelContainer" parent="CanvasLayer" unique_id=893051179]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -110.0
+offset_right = 160.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/GadgetPanel" unique_id=1576458055]
+custom_minimum_size = Vector2(300, 200)
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=1102938475]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "SELECT GADGET"
+horizontal_alignment = 1
+
+[node name="GadgetOption" type="OptionButton" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=433270164]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+
+[node name="ConfirmStartButton" type="Button" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=724190010]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "START RUN"
+
+[node name="BackFromGadgetButton" type="Button" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=992837461]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+text = "BACK"
+
+[node name="StatsPanel" type="PanelContainer" parent="CanvasLayer" unique_id=1948273610]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -140.0
+offset_right = 160.0
+offset_bottom = 140.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/StatsPanel" unique_id=1847201934]
+custom_minimum_size = Vector2(300, 260)
+layout_mode = 2
+
+[node name="StatsHeader" type="Label" parent="CanvasLayer/StatsPanel/VBoxContainer" unique_id=827361940]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "LIFETIME STATS"
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="CanvasLayer/StatsPanel/VBoxContainer" unique_id=928374615]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Loading stats..."
 
-[node name="StartButton" type="Button" parent="CanvasLayer/PanelContainer/VBoxContainer" unique_id=724190010]
+[node name="BackFromStatsButton" type="Button" parent="CanvasLayer/StatsPanel/VBoxContainer" unique_id=665544332]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
-text = "START RUN
-"
+text = "BACK"
