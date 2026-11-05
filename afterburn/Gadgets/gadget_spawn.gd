@@ -29,10 +29,15 @@ func _physics_process(delta: float) -> void:
 	if body == null or power_mgr == null:
 		return
 
-	# Handle missed pickups: queue free if item drops 5+ meters behind player
+	# Monitor active gadget position; free it and log miss if passed (5+ meters behind player)
 	if is_instance_valid(_active_gadget):
 		var relative_z: float = body.to_local(_active_gadget.global_position).z
 		if relative_z > 5.0:
+			var gadget_name_str: String = "Gadget"
+			if "gadget_type" in _active_gadget and "TYPE_TO_ID" in _active_gadget:
+				gadget_name_str = _active_gadget.TYPE_TO_ID.get(_active_gadget.gadget_type, "gadget").replace("_", " ").capitalize()
+			
+			print("[ITEM MISSED] ", gadget_name_str, " Pickup missed at position: ", _active_gadget.global_position)
 			_active_gadget.queue_free()
 			_on_gadget_cleared()
 		return
@@ -73,6 +78,13 @@ func _spawn_gadget() -> void:
 
 	gadget_instance.global_position = spawn_pos
 	_active_gadget = gadget_instance
+
+	# Terminal Debug Log
+	var gadget_name_str: String = "Gadget"
+	if "gadget_type" in gadget_instance and "TYPE_TO_ID" in gadget_instance:
+		gadget_name_str = gadget_instance.TYPE_TO_ID.get(gadget_instance.gadget_type, "gadget").replace("_", " ").capitalize()
+	
+	print("[ITEM SPAWN] ", gadget_name_str, " Pickup spawned at position: ", gadget_instance.global_position, " (Lane: ", random_lane + 1, ")")
 
 	gadget_instance.tree_exited.connect(_on_gadget_tree_exited)
 
