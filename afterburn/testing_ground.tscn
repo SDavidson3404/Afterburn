@@ -9,9 +9,9 @@
 [ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
 [ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
 [ext_resource type="PackedScene" uid="uid://dq8tr83phbqvk" path="res://UI/loadout_ui.tscn" id="7_alr7o"]
-[ext_resource type="PackedScene" uid="uid://cx1kihp4k4g7r" path="res://Gadgets/gadget_pickup.tscn" id="7_frp2q"]
 [ext_resource type="Script" uid="uid://q8wuo3kblhml" path="res://Gadgets/gadget_spawn.gd" id="8_ycv7h"]
 [ext_resource type="PackedScene" uid="uid://b8x32m5pause1" path="res://UI/pause_menu.tscn" id="12_delyl"]
+[ext_resource type="PackedScene" uid="uid://cx1kihp4k4g7r" path="res://Gadgets/gadget_pickup.tscn" id="13_gadget_pickup"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
 size = Vector3(21, 15, 1)
@@ -94,10 +94,11 @@ power = NodePath("../Power")
 [node name="LoadoutUI" parent="." unique_id=1704217928 node_paths=PackedStringArray("power_node") instance=ExtResource("7_alr7o")]
 power_node = NodePath("../Power")
 
-[node name="GadgetSpawner" type="Node3D" parent="." unique_id=1430979975 node_paths=PackedStringArray("player")]
+[node name="GadgetSpawner" type="Node3D" parent="." unique_id=1430979975 node_paths=PackedStringArray("power_mgr", "target_body")]
 script = ExtResource("8_ycv7h")
-gadget_pickup_scene = ExtResource("7_frp2q")
-player = NodePath("../Player")
+gadget_scene = ExtResource("13_gadget_pickup")
+power_mgr = NodePath("../Power")
+target_body = NodePath("../Player")
 
 [node name="PauseMenu" parent="." unique_id=150674282 node_paths=PackedStringArray("power_node", "loadout_ui") instance=ExtResource("12_delyl")]
 power_node = NodePath("../Power")
