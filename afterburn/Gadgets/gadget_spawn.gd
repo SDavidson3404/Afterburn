@@ -29,7 +29,7 @@ func _physics_process(delta: float) -> void:
 	if body == null or power_mgr == null:
 		return
 
-	# Monitor active gadget position; free it if missed (5+ units behind player)
+	# Handle missed pickups: queue free if item drops 5+ meters behind player
 	if is_instance_valid(_active_gadget):
 		var relative_z: float = body.to_local(_active_gadget.global_position).z
 		if relative_z > 5.0:
@@ -40,7 +40,7 @@ func _physics_process(delta: float) -> void:
 	if _target_distance_for_next_spawn <= 0.0:
 		_target_distance_for_next_spawn = _calculate_next_spawn_distance()
 
-	# Track distance when track is clear
+	# Track travel distance while lane is clear
 	if _active_gadget == null:
 		var current_speed: float = power_mgr.current_speed if "current_speed" in power_mgr else 15.0
 		_distance_traveled_since_spawn += current_speed * delta
@@ -59,9 +59,8 @@ func _spawn_gadget() -> void:
 	var gadget_instance = gadget_scene.instantiate() as Node3D
 	get_parent().add_child(gadget_instance)
 
-	# Calculate reaction distance and select a random lane offset
 	var spawn_distance_ahead: float = power_mgr.get_current_spawn_distance() if power_mgr.has_method("get_current_spawn_distance") else 45.0
-	
+
 	var random_lane: int = randi() % total_lanes
 	@warning_ignore("integer_division")
 	var lane_offset_index: int = random_lane - (total_lanes / 2)
@@ -75,7 +74,6 @@ func _spawn_gadget() -> void:
 	gadget_instance.global_position = spawn_pos
 	_active_gadget = gadget_instance
 
-	# Tree exited callback handles node destruction on pickup
 	gadget_instance.tree_exited.connect(_on_gadget_tree_exited)
 
 func _on_gadget_cleared() -> void:
