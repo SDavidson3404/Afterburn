@@ -1,5 +1,5 @@
-## Dedicated spawner node that projects standalone gadget pickups ahead of the player based on speed-calculated distance.
-## Calculates spawn distance using 20-25 seconds of travel time at target speed and acceleration.
+## Dedicated spawner node that projects standalone gadget pickups ahead of the player.
+## Uses player distance traveled to determine spawn milestones based on 20-25 seconds of travel time.
 extends Node3D
 
 @export_category("Scene References")
@@ -13,11 +13,11 @@ extends Node3D
 @export var power: Node
 
 @export_category("Spawn Distance Pacing")
-## Minimum time window in seconds used to calculate spawn distance ahead of player.
-@export var min_spawn_time: float = 20.0
+## Minimum projected travel time in seconds before the next gadget spawn milestone.
+@export var min_travel_time: float = 16.0
 
-## Maximum time window in seconds used to calculate spawn distance ahead of player.
-@export var max_spawn_time: float = 25.0
+## Maximum projected travel time in seconds before the next gadget spawn milestone.
+@export var max_travel_time: float = 20.0
 
 @export_category("Track Layout")
 ## Total number of active movement lanes across the track.
@@ -26,8 +26,12 @@ extends Node3D
 ## Width of each lane in world units.
 @export var lane_width: float = 3.0
 
-# Runtime state tracking
+# Runtime distance tracking
 var _active_gadget: Node3D = null
+var _distance_traveled_since_spawn: float = 0.0
+var _target_distance_for_next_spawn: float = 0.0
+var _last_player_z: float = 0.0
+var _is_tracking: bool = false
 
 
 func _ready() -> void:
@@ -35,6 +39,8 @@ func _ready() -> void:
 		player = get_tree().get_first_node_in_group("Player") as Player
 	if not power and player:
 		power = player.get("power_node") as Node
+
+	_calculate_next_spawn_distance()
 
 
 func _process(_delta: float) -> void:
@@ -47,7 +53,22 @@ func _process(_delta: float) -> void:
 
 	var power_mgr := _get_power_manager(target_player)
 	if power_mgr and not power_mgr.get("is_run_active"):
+		_is_tracking = false
 		return
+
+	# Initialize player Z tracking when run begins
+	if not _is_tracking:
+		_last_player_z = target_player.global_position.z
+		_is_tracking = true
+		return
+
+	# Calculate meters moved along Z-axis in this frame
+	var current_z: float = target_player.global_position.z
+	var move_delta: float = maxf(0.0, _last_player_z - current_z)
+	_last_player_z = current_z
+
+	# Accumulate physical distance moved toward the next spawn target
+	_distance_traveled_since_spawn += move_delta
 
 	# Monitor active gadget position relative to player to detect missed pickups
 	if is_instance_valid(_active_gadget):
@@ -57,37 +78,41 @@ func _process(_delta: float) -> void:
 			_on_gadget_missed()
 		return
 
-	# If no active gadget exists in the world, spawn the next gadget ahead
-	_spawn_gadget()
+	# Trigger spawn when distance threshold is reached and no active gadget exists
+	if _distance_traveled_since_spawn >= _target_distance_for_next_spawn:
+		_spawn_gadget()
 
 
-## Calculates distance 20-25 seconds ahead factoring speed acceleration and instantiates gadget pickup.
+## Calculates required meters to travel for next gadget based on 20-25 seconds of target speed.
+func _calculate_next_spawn_distance() -> void:
+	_distance_traveled_since_spawn = 0.0
+
+	var target_player := _get_moving_target()
+	var power_mgr := _get_power_manager(target_player) if target_player else null
+
+	var current_spd: float = 15.0
+	if power_mgr:
+		if "target_speed" in power_mgr and power_mgr.target_speed > 0:
+			current_spd = power_mgr.target_speed
+		elif "current_speed" in power_mgr and power_mgr.current_speed > 0:
+			current_spd = power_mgr.current_speed
+
+	var time_window: float = randf_range(min_travel_time, max_travel_time)
+	_target_distance_for_next_spawn = current_spd * time_window
+
+
+## Spawns the gadget ahead on visible generated track once target distance is reached.
 func _spawn_gadget() -> void:
-	if not gadget_pickup_scene or is_instance_valid(_active_gadget):
-		return
-
 	var target_body := _get_moving_target()
 	if not target_body:
 		return
 
 	var power_mgr := _get_power_manager(target_body)
 
-	# Extract target speed and acceleration from power manager
-	var target_speed: float = 15.0
-	var speed_accel: float = 0.25
-
-	if power_mgr:
-		if "target_speed" in power_mgr:
-			target_speed = power_mgr.target_speed
-		elif "current_speed" in power_mgr:
-			target_speed = power_mgr.current_speed
-
-		if "speed_acceleration" in power_mgr:
-			speed_accel = power_mgr.speed_acceleration
-
-	# Calculate travel distance over a random 20-25 second window: D = v * t + 0.5 * a * t^2
-	var spawn_time_window: float = randf_range(min_spawn_time, max_spawn_time)
-	var spawn_distance: float = (target_speed * spawn_time_window) + (0.5 * speed_accel * spawn_time_window * spawn_time_window)
+	# Query standard spawn distance so pickup renders safely within track limits
+	var spawn_distance_ahead: float = 100.0
+	if power_mgr and power_mgr.has_method("get_current_spawn_distance"):
+		spawn_distance_ahead = power_mgr.get_current_spawn_distance()
 
 	# Pick a random lane index and convert to symmetric X-offset centered at 0.0
 	var lane: int = randi() % total_lanes
@@ -99,17 +124,34 @@ func _spawn_gadget() -> void:
 	get_parent().add_child(gadget_instance)
 	_active_gadget = gadget_instance
 
-	# Position pickup floating 1.0 unit above track floor along player's forward transform basis
+	# Project position forward along player transform basis
 	var spawn_pos: Vector3 = target_body.global_position
-	spawn_pos += -target_body.global_transform.basis.z * spawn_distance
+	spawn_pos += -target_body.global_transform.basis.z * spawn_distance_ahead
 	spawn_pos.x = gadget_x
 	spawn_pos.y = 1.0
 
 	gadget_instance.global_position = spawn_pos
 
+	# Resolve Gadget Type Name
+	var gadget_name_str: String = "Gadget"
+	if "gadget_type" in gadget_instance:
+		gadget_name_str = gadget_instance.TYPE_TO_ID.get(gadget_instance.gadget_type, "gadget").replace("_", " ").capitalize()
+
+	# Terminal Debug Log
+	print("[NORMAL GADGET SPAWN] ", gadget_name_str, " spawned at position: ", gadget_instance.global_position, " (Lane: ", lane + 1, ")")
+
+	# Immediately reset distance counter and calculate next spawn target distance
+	_calculate_next_spawn_distance()
+
 
 ## Callback triggered when active gadget passes behind player uncollected.
 func _on_gadget_missed() -> void:
+	if is_instance_valid(_active_gadget):
+		var gadget_name_str: String = "Gadget"
+		if "gadget_type" in _active_gadget:
+			gadget_name_str = _active_gadget.TYPE_TO_ID.get(_active_gadget.gadget_type, "gadget").replace("_", " ").capitalize()
+		print("[ITEM MISSED] ", gadget_name_str, " missed at position: ", _active_gadget.global_position)
+
 	_clear_active_gadget()
 
 

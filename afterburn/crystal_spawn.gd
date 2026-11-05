@@ -99,6 +99,9 @@ func spawn_crystal() -> void:
 	spawn_pos.y = randf_range(1.5, 2.5)
 
 	crystal.global_position = spawn_pos
+	
+	# Terminal Debug Log
+	print("[ITEM SPAWN] Power Crystal spawned at position: ", crystal.global_position, " (Lane: ", random_lane + 1, ")")
 
 
 ## Callback triggered when player collects the active crystal.
@@ -113,6 +116,8 @@ func on_crystal_collected() -> void:
 
 ## Callback triggered when active crystal passes behind player uncollected.
 func on_crystal_missed() -> void:
+	if is_instance_valid(_active_crystal):
+		print("[ITEM MISSED] Power Crystal missed at position: ", _active_crystal.global_position)
 	_clear_active_crystal()
 	_calculate_and_start_spawn_timer()
 

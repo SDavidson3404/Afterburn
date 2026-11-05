@@ -257,10 +257,14 @@ func _set_invincible(enabled: bool, duration: float = 0.0) -> void:
 ## Handles zero-power fuel exhaustion, triggering either Overdrive Surge or standard coasting.
 func _handle_zero_power() -> void:
 	if has_overdriven_rocket:
+		if not is_overdrive_surge:
+			print("[POWER EXHAUSTED] Suit fuel depleted! Initiating OVERDRIVE SURGE!")
 		is_overdrive_surge = true
 		if player and player.current_speed > current_speed:
 			current_speed = player.current_speed
 	else:
+		if not is_coasting:
+			print("[POWER EXHAUSTED] Suit fuel depleted! Starting COASTING deceleration...")
 		is_coasting = true
 
 
@@ -277,6 +281,9 @@ func reduce_gadget_cooldown(amount: float) -> void:
 func try_use_loadout_gadget() -> void:
 	if not selected_gadget or not is_run_active or not is_gadget_ready or not player:
 		return
+
+	var gadget_display_name: String = selected_gadget.gadget_name if "gadget_name" in selected_gadget else "Gadget"
+	print("[GADGET ACTIVATED] Activated selected loadout gadget: ", gadget_display_name)
 
 	selected_gadget.activate_ability(player, self)
 		
@@ -336,11 +343,17 @@ func obstacle_hit(damage: float = 25.0) -> void:
 
 	# Intercept hit if Power Armor shield layer is active
 	if active_armor_layers.size() > 0:
-		active_armor_layers[0].absorb_hit()
+		var armor = active_armor_layers[0]
+		var broke: bool = armor.absorb_hit()
+		if broke:
+			print("[OBSTACLE HIT] Power Armor absorbed hit and BROKE!")
+		else:
+			print("[OBSTACLE HIT] Power Armor absorbed hit! Hits remaining: ", armor.hits_remaining)
 		return
 		
 	# Zero-power coasting/surge states result in immediate game over on hit
 	if is_coasting or is_overdrive_surge:
+		print("[OBSTACLE HIT] Collided with obstacle while coasting/overdriven! Immediate crash.")
 		end_run()
 		return
 	
@@ -350,13 +363,17 @@ func obstacle_hit(damage: float = 25.0) -> void:
 	if is_overcharged:
 		if overdrive_rocket_timer > total_damage:
 			overdrive_rocket_timer -= total_damage
+			print("[OBSTACLE HIT] Rocket Overcharge absorbed hit! Remaining fuel timer: ", "%.1f" % overdrive_rocket_timer, "s")
 			return
 		else:
 			total_damage -= overdrive_rocket_timer
 			overdrive_rocket_timer = 0.0
 			is_overcharged = false
+			print("[OBSTACLE HIT] Rocket Overcharge shield depleted by obstacle hit!")
 
 	current_power = maxf(0.0, current_power - total_damage)
+	print("[OBSTACLE HIT] Hit obstacle! Damage taken: ", "%.1f" % total_damage, " | Remaining Power: ", "%.1f" % current_power)
+	
 	power_changed.emit(current_power, max_power)
 	if current_power <= 0.0:
 		_handle_zero_power()
@@ -378,6 +395,7 @@ func end_run() -> void:
 ## Power drain callback invoked when player dashes.
 func dash():
 	current_power = clampf(current_power - dash_cost, 0.0, max_power)
+	print("[PLAYER DASH] Dash executed! Remaining Power: ", "%.1f" % current_power)
 	power_changed.emit(current_power, max_power)
 	if current_power <= 0.0 and not is_overcharged:
 		_handle_zero_power()

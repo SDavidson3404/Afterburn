@@ -75,6 +75,10 @@ func _on_body_entered(body: Node3D) -> void:
 	var player_node: Node3D = body if body is Player else body.get_parent() as Node3D
 	if player_node and player_node.is_in_group("Player"):
 		_is_collected = true
+		
+		var gadget_name_str: String = TYPE_TO_ID.get(gadget_type, "gadget").replace("_", " ").capitalize()
+		print("[ITEM PICKUP] Collected ", gadget_name_str, " Pickup at position: ", global_position)
+		
 		_trigger_pickup_effect(player_node)
 		if get_node_or_null("/root/DatabaseManager"):
 			DatabaseManager.add_gadget()
