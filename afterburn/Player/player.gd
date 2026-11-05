@@ -72,7 +72,8 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	
 	# If the player clicks, set the mouse to capture
-	if event.is_action_pressed("Click") and power_node and power_node.is_run_active: Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if event.is_action_pressed("Click") and power_node and power_node.is_run_active: 
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
 	# If A is pressed, move left
 	if event.is_action_pressed("A"): move_left()
@@ -80,14 +81,13 @@ func _input(event: InputEvent) -> void:
 	# If D is pressed, move right
 	if event.is_action_pressed("D"): move_right()
 	
-	# If Shift is pressed and the player is not currently sliding and the player is on the floor, begin slide
+	# If S is pressed and the player is not currently sliding and the player is on the floor, begin slide
 	if event.is_action_pressed("S") and not is_sliding and body.is_on_floor(): 
 		slide()
 	
 	# If W is pressed and the current power is greater than or equal to the cost
 	if event.is_action_pressed("W") and power_node:
 		if power_node.current_power >= power_node.dash_cost:
-			
 			# Set dashing to true and emit the dashing signal
 			is_dashing = true
 			dashing.emit()
