@@ -51,12 +51,7 @@ func _ensure_confirm_panel_exists() -> void:
 	if not confirm_panel:
 		confirm_panel = PanelContainer.new()
 		confirm_panel.name = "ConfirmPanel"
-		confirm_panel.layout_mode = 1
-		confirm_panel.anchors_preset = Control.PRESET_CENTER
-		confirm_panel.anchor_left = 0.5
-		confirm_panel.anchor_top = 0.5
-		confirm_panel.anchor_right = 0.5
-		confirm_panel.anchor_bottom = 0.5
+		confirm_panel.set_anchors_preset(Control.PRESET_CENTER)
 		confirm_panel.offset_left = -140.0
 		confirm_panel.offset_top = -80.0
 		confirm_panel.offset_right = 140.0

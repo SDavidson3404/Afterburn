@@ -11,7 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://dq8tr83phbqvk" path="res://UI/loadout_ui.tscn" id="7_alr7o"]
 [ext_resource type="PackedScene" uid="uid://cx1kihp4k4g7r" path="res://Gadgets/gadget_pickup.tscn" id="7_frp2q"]
 [ext_resource type="Script" uid="uid://q8wuo3kblhml" path="res://Gadgets/gadget_spawn.gd" id="8_ycv7h"]
-[ext_resource type="PackedScene" uid="uid://olkkgxbkamgb" path="res://UI/pause_menu.tscn" id="12_delyl"]
+[ext_resource type="PackedScene" uid="uid://b8x32m5pause1" path="res://UI/pause_menu.tscn" id="12_delyl"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
 size = Vector3(21, 15, 1)
