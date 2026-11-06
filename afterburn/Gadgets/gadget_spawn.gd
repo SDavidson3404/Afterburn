@@ -29,8 +29,11 @@ func _physics_process(delta: float) -> void:
 	if body == null or power_mgr == null:
 		return
 
-	# Monitor active gadget position; free it and log miss if passed (5+ meters behind player)
+	# Monitor active gadget position; ignore if already queued for collection/deletion
 	if is_instance_valid(_active_gadget):
+		if _active_gadget.is_queued_for_deletion():
+			return
+
 		var relative_z: float = body.to_local(_active_gadget.global_position).z
 		if relative_z > 5.0:
 			var gadget_name_str: String = "Gadget"
