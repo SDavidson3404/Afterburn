@@ -121,4 +121,8 @@ func _calculate_next_spawn_distance() -> float:
 		return 0.0
 	var current_target_speed: float = power_mgr.target_speed if "target_speed" in power_mgr else 15.0
 	var time_gap: float = randf_range(min_spawn_time_gap, max_spawn_time_gap)
-	return current_target_speed * time_gap
+	var reaction_time: float = power_mgr.get_reaction_time() if power_mgr.has_method("get_reaction_time") else 3.0
+	
+	# Subtract reaction_time so the gadget arrives at the player within the 16-20s window
+	var travel_time: float = maxf(0.1, time_gap - reaction_time)
+	return current_target_speed * travel_time

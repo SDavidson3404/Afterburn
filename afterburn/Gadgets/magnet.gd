@@ -21,8 +21,8 @@ func activate_ability(player: Node3D, _power_manager: Node) -> void:
 		return
 
 	var magnet_instance = MagnetInstance.new()
-	magnet_instance.duration = 15.0
-	magnet_instance.max_duration = 15.0
+	magnet_instance.duration = 16.0
+	magnet_instance.max_duration = 16.0
 	magnet_instance.player = player
 	magnet_instance.name = "MagnetInstance"
 	player.add_child(magnet_instance)
@@ -31,10 +31,10 @@ func activate_ability(player: Node3D, _power_manager: Node) -> void:
 ## Inner component node attached to the player that pulls track collectibles dynamically.
 class MagnetInstance extends Node:
 	## Active duration remaining in seconds.
-	var duration: float = 15.0
+	var duration: float = 16.0
 	
 	## Max duration cap used for timer refreshes.
-	var max_duration: float = 15.0
+	var max_duration: float = 16.0
 	
 	## Reference to the target player node.
 	var player: Node3D = null

@@ -99,10 +99,6 @@ script = ExtResource("8_ycv7h")
 gadget_scene = ExtResource("13_gadget_pickup")
 power_mgr = NodePath("../Power")
 target_body = NodePath("../Player")
-min_spawn_time_gap = null
-max_spawn_time_gap = null
-lane_width = null
-total_lanes = null
 
 [node name="PauseMenu" parent="." unique_id=150674282 node_paths=PackedStringArray("power_node", "loadout_ui") instance=ExtResource("12_delyl")]
 power_node = NodePath("../Power")
