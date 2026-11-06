@@ -77,7 +77,13 @@ func _on_body_entered(body: Node3D) -> void:
 		_is_collected = true
 		
 		var gadget_name_str: String = TYPE_TO_ID.get(gadget_type, "gadget").replace("_", " ").capitalize()
-		print("[ITEM PICKUP] Collected ", gadget_name_str, " Pickup at position: ", global_position)
+		
+		# If tagged by spawner, forward to gadget_spawn to print elapsed time and reset timer
+		var spawner = get_meta("spawner") if has_meta("spawner") else null
+		if is_instance_valid(spawner) and spawner.has_method("on_gadget_collected"):
+			spawner.on_gadget_collected(self, gadget_name_str)
+		else:
+			print("[ITEM PICKUP] Collected ", gadget_name_str, " Pickup at position: ", global_position)
 		
 		_trigger_pickup_effect(player_node)
 		if get_node_or_null("/root/DatabaseManager"):

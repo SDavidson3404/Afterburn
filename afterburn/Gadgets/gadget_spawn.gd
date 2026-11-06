@@ -13,6 +13,7 @@ extends Node3D
 var _active_gadget: Node3D = null
 var _distance_traveled_since_spawn: float = 0.0
 var _target_distance_for_next_spawn: float = 0.0
+var _timer: float = 0.0
 
 func _ready() -> void:
 	if power_mgr:
@@ -29,6 +30,9 @@ func _physics_process(delta: float) -> void:
 	if body == null or power_mgr == null:
 		return
 
+	# Accumulate elapsed time for gadget interval
+	_timer += delta
+
 	# Monitor active gadget position; ignore if already queued for collection/deletion
 	if is_instance_valid(_active_gadget):
 		if _active_gadget.is_queued_for_deletion():
@@ -40,17 +44,22 @@ func _physics_process(delta: float) -> void:
 			if "gadget_type" in _active_gadget and "TYPE_TO_ID" in _active_gadget:
 				gadget_name_str = _active_gadget.TYPE_TO_ID.get(_active_gadget.gadget_type, "gadget").replace("_", " ").capitalize()
 			
-			print("[ITEM MISSED] ", gadget_name_str, " Pickup missed at position: ", _active_gadget.global_position)
+			print("[ITEM MISSED] ", gadget_name_str, " Pickup missed at position: ", _active_gadget.global_position, " | Time: ", "%.1f" % _timer, "s")
 			_active_gadget.queue_free()
-			_on_gadget_cleared()
+			_reset_cooldown_and_calculate_next()
 		return
 
 	if _target_distance_for_next_spawn <= 0.0:
 		_target_distance_for_next_spawn = _calculate_next_spawn_distance()
 
-	# Track travel distance while lane is clear
+	# Track travel distance while lane is clear using actual player body velocity
 	if _active_gadget == null:
-		var current_speed: float = power_mgr.current_speed if "current_speed" in power_mgr else 15.0
+		var current_speed: float = 15.0
+		if "current_speed" in body:
+			current_speed = body.current_speed
+		elif "current_speed" in power_mgr:
+			current_speed = power_mgr.current_speed
+
 		_distance_traveled_since_spawn += current_speed * delta
 
 		if _distance_traveled_since_spawn >= _target_distance_for_next_spawn:
@@ -65,6 +74,7 @@ func _spawn_gadget() -> void:
 		return
 
 	var gadget_instance = gadget_scene.instantiate() as Node3D
+	gadget_instance.set_meta("spawner", self)
 	get_parent().add_child(gadget_instance)
 
 	var spawn_distance_ahead: float = power_mgr.get_current_spawn_distance() if power_mgr.has_method("get_current_spawn_distance") else 45.0
@@ -91,22 +101,24 @@ func _spawn_gadget() -> void:
 
 	gadget_instance.tree_exited.connect(_on_gadget_tree_exited)
 
-func _on_gadget_cleared() -> void:
-	if is_instance_valid(_active_gadget) and _active_gadget.tree_exited.is_connected(_on_gadget_tree_exited):
-		_active_gadget.tree_exited.disconnect(_on_gadget_tree_exited)
+func on_gadget_collected(gadget_node: Node3D, gadget_name_str: String) -> void:
+	print("[ITEM PICKUP] Collected ", gadget_name_str, " Pickup at position: ", gadget_node.global_position, " | Time: ", "%.1f" % _timer, "s")
 	_reset_cooldown_and_calculate_next()
 
 func _on_gadget_tree_exited() -> void:
 	_reset_cooldown_and_calculate_next()
 
 func _reset_cooldown_and_calculate_next() -> void:
+	if is_instance_valid(_active_gadget) and _active_gadget.tree_exited.is_connected(_on_gadget_tree_exited):
+		_active_gadget.tree_exited.disconnect(_on_gadget_tree_exited)
 	_active_gadget = null
+	_timer = 0.0
 	_distance_traveled_since_spawn = 0.0
 	_target_distance_for_next_spawn = _calculate_next_spawn_distance()
 
 func _calculate_next_spawn_distance() -> float:
 	if power_mgr == null:
 		return 0.0
-	var target_speed: float = power_mgr.target_speed if "target_speed" in power_mgr else 15.0
+	var current_target_speed: float = power_mgr.target_speed if "target_speed" in power_mgr else 15.0
 	var time_gap: float = randf_range(min_spawn_time_gap, max_spawn_time_gap)
-	return target_speed * time_gap
+	return current_target_speed * time_gap
