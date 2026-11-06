@@ -144,7 +144,11 @@ func _clear_active_crystal() -> void:
 ## Calculates spawn timer delay factoring in random drain bounds, invincibility, and reaction time.
 func _calculate_and_start_spawn_timer() -> void:
 	var target_drain_time: float = randf_range(min_drain_time, max_drain_time)
-	var reaction_time: float = power.get_reaction_time() if power.has_method("get_reaction_time") else 3.0
+	
+	# Safe null-check prevents crash if power reference is missing
+	var reaction_time: float = 3.0
+	if power and power.has_method("get_reaction_time"):
+		reaction_time = power.get_reaction_time()
 	
 	# Only subtract reaction_time; active invincibility holds the timer in _process()
 	_spawn_timer = maxf(0.05, target_drain_time - reaction_time)

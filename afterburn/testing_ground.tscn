@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://q8wuo3kblhml" path="res://Gadgets/gadget_spawn.gd" id="8_ycv7h"]
 [ext_resource type="PackedScene" uid="uid://b8x32m5pause1" path="res://UI/pause_menu.tscn" id="12_delyl"]
 [ext_resource type="PackedScene" uid="uid://cx1kihp4k4g7r" path="res://Gadgets/gadget_pickup.tscn" id="13_gadget_pickup"]
+[ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="14_crystal_scene"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
 size = Vector3(21, 15, 1)
@@ -82,8 +83,11 @@ player = NodePath("../Player")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
 shape = SubResource("BoxShape3D_jp6wc")
 
-[node name="CrystalSpawner" type="Node3D" parent="." unique_id=1351622964]
+[node name="CrystalSpawner" type="Node3D" parent="." unique_id=1351622964 node_paths=PackedStringArray("player", "power")]
 script = ExtResource("5_ytm02")
+crystal_scene = ExtResource("14_crystal_scene")
+player = NodePath("../Player")
+power = NodePath("../Power")
 
 [node name="Obstacles" type="Node3D" parent="." unique_id=1141337569]
 

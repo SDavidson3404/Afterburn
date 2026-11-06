@@ -43,7 +43,7 @@ var current_slide_dodge_count: int = 0
 # Dynamic stat multipliers overridden by gadgets (e.g., Hoverboard)
 var jump_velocity_multiplier: float = 1.0
 var gravity_multiplier: float = 1.0
-var dash_drain_multiplier: float = 1.0
+var dash_decel_multiplier: float = 1.0
 var dash_decel_rate: float = 0.0
 
 ## Runs when the scene is instanced or loaded in
@@ -167,7 +167,7 @@ func _physics_process(delta: float) -> void:
 			# Calculate required deceleration rate to reach target speed in exactly 1.0 second
 			if dash_decel_rate <= 0.0:
 				var excess_speed: float = abs(body.velocity.z - target_vel_z)
-				var decel_duration: float = 1.0 / maxf(dash_drain_multiplier, 0.01)
+				var decel_duration: float = 1.0 / maxf(dash_decel_multiplier, 0.01)
 				dash_decel_rate = excess_speed / maxf(decel_duration, 0.01)
 			
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, dash_decel_rate * delta)

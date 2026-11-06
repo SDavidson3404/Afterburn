@@ -47,7 +47,7 @@ class HoverboardInstance extends Node:
 		# Apply active mobility buffs upon entering the scene tree
 		if player:
 			player.jump_velocity_multiplier = 2.0
-			player.dash_drain_multiplier = 0.40
+			player.dash_decel_multiplier = 0.40
 		
 		if power_manager:
 			power_manager.coasting_deceleration_multiplier = 0.40
@@ -63,7 +63,7 @@ class HoverboardInstance extends Node:
 	func _end_hoverboard() -> void:
 		if player:
 			player.jump_velocity_multiplier = 1.0
-			player.dash_drain_multiplier = 1.0
+			player.dash_decel_multiplier = 1.0
 			
 		if power_manager:
 			power_manager.coasting_deceleration_multiplier = 1.0

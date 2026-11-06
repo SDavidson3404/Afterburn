@@ -83,6 +83,7 @@ func start_run() -> void:
 	# Reset suit modifiers and overdrive states to baseline defaults
 	is_overcharged = false
 	overdrive_rocket_timer = 0.0
+	speed_acceleration = 0.25
 	max_power = 100.0
 	crystal_power_yield = 1.0
 	passive_drain_multiplier = 1.0
