@@ -4,7 +4,7 @@ extends GadgetBase
 
 @export_category("Ability Properties")
 ## Total active duration of the hoverboard buff in seconds.
-@export var duration: float = 20.0
+@export var duration: float = 30.0
 
 
 func _init() -> void:
@@ -37,8 +37,8 @@ func activate_ability(player: Node3D, power_manager: Node) -> void:
 
 ## Inner component node attached to the player to manage temporary hoverboard state and stat modifiers.
 class HoverboardInstance extends Node:
-	var duration: float = 20.0
-	var max_duration: float = 20.0
+	var duration: float = 30.0
+	var max_duration: float = 30.0
 	var player: Node3D = null
 	var power_manager: Node = null
 
@@ -55,6 +55,13 @@ class HoverboardInstance extends Node:
 
 	func _process(delta: float) -> void:
 		duration -= delta
+		if duration <= 0.0:
+			_end_hoverboard()
+
+
+	## Deducts 10% of total duration (3.0s) whenever the player executes a jump.
+	func on_jump() -> void:
+		duration -= max_duration * 0.10
 		if duration <= 0.0:
 			_end_hoverboard()
 

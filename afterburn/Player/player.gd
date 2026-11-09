@@ -196,6 +196,11 @@ func _physics_process(delta: float) -> void:
 		body.velocity.y += (JUMP_VELOCITY * jump_velocity_multiplier)
 		is_jumping_maneuver = true
 		current_jump_dodge_count = 0
+
+		# Deduct 10% total hoverboard duration on jump
+		var hover_inst = get_node_or_null("HoverboardInstance")
+		if hover_inst and hover_inst.has_method("on_jump"):
+			hover_inst.on_jump()
 	
 	# Reset jump maneuver state upon touching floor
 	if body.is_on_floor():
