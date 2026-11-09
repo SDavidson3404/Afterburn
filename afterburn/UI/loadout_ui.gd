@@ -1,6 +1,10 @@
 ## Main Menu and Loadout interface script.
 ## Handles main menu navigation (Start, Stats, Exit), gadget selection, lifetime stat displays, and mouse state transitions.
+class_name LoadoutUI
 extends Control
+
+## Static flag allowing scene reloads to bypass the main menu for immediate respawns
+static var auto_start_next_run: bool = false
 
 @export_category("Node References")
 ## Reference to the main power manager node responsible for tracking run state.
@@ -60,7 +64,11 @@ func _ready() -> void:
 	back_from_gadget_button.pressed.connect(_show_main_menu)
 	back_from_stats_button.pressed.connect(_show_main_menu)
 
-	_show_main_menu()
+	if auto_start_next_run:
+		auto_start_next_run = false
+		_on_confirm_start_button_pressed()
+	else:
+		_show_main_menu()
 
 
 func _unhandled_input(event: InputEvent) -> void:
