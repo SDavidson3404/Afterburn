@@ -17,16 +17,16 @@ func show_game_over() -> void:
 	show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-## Starts another round instantly upon clicking RESPAWN
+## Opens the gadget selection UI upon clicking RESPAWN
 func _on_respawn_pressed() -> void:
 	hide()
 	get_tree().paused = false
-	LoadoutUI.auto_start_next_run = true
+	LoadoutUI.open_gadget_select_on_respawn = true
 	get_tree().reload_current_scene()
 
 ## Reloads the scene and returns to the Main Menu
 func _on_menu_pressed() -> void:
 	hide()
 	get_tree().paused = false
-	LoadoutUI.auto_start_next_run = false
+	LoadoutUI.open_gadget_select_on_respawn = false
 	get_tree().reload_current_scene()

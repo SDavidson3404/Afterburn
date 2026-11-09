@@ -3,8 +3,11 @@
 class_name LoadoutUI
 extends Control
 
-## Static flag allowing scene reloads to bypass the main menu for immediate respawns
-static var auto_start_next_run: bool = false
+## Static flag causing scene reloads from respawns to open the gadget selection screen directly
+static var open_gadget_select_on_respawn: bool = false
+
+## Static variable preserving the last selected gadget index across respawns
+static var last_selected_gadget_index: int = 0
 
 @export_category("Node References")
 ## Reference to the main power manager node responsible for tracking run state.
@@ -56,6 +59,10 @@ func _ready() -> void:
 	for i in range(GADGET_OPTIONS.size()):
 		gadget_option.add_item(GADGET_OPTIONS[i]["name"], i)
 
+	# Restore previous selection index if available
+	if last_selected_gadget_index >= 0 and last_selected_gadget_index < GADGET_OPTIONS.size():
+		gadget_option.selected = last_selected_gadget_index
+
 	# Connect signal listeners
 	start_menu_button.pressed.connect(_on_start_menu_button_pressed)
 	stats_menu_button.pressed.connect(_on_stats_menu_button_pressed)
@@ -64,9 +71,9 @@ func _ready() -> void:
 	back_from_gadget_button.pressed.connect(_show_main_menu)
 	back_from_stats_button.pressed.connect(_show_main_menu)
 
-	if auto_start_next_run:
-		auto_start_next_run = false
-		_on_confirm_start_button_pressed()
+	if open_gadget_select_on_respawn:
+		open_gadget_select_on_respawn = false
+		_show_gadget_selection()
 	else:
 		_show_main_menu()
 
@@ -84,10 +91,14 @@ func _show_main_menu() -> void:
 	stats_panel.hide()
 
 
-func _on_start_menu_button_pressed() -> void:
+func _show_gadget_selection() -> void:
 	main_menu_panel.hide()
 	gadget_panel.show()
 	stats_panel.hide()
+
+
+func _on_start_menu_button_pressed() -> void:
+	_show_gadget_selection()
 
 
 func _on_stats_menu_button_pressed() -> void:
@@ -137,6 +148,8 @@ func _on_confirm_start_button_pressed() -> void:
 		power_node.selected_gadget = null
 
 	var selected_idx: int = gadget_option.selected
+	last_selected_gadget_index = selected_idx
+
 	if selected_idx >= 0 and selected_idx < GADGET_OPTIONS.size():
 		var gadget_id: String = GADGET_OPTIONS[selected_idx]["id"]
 		if not gadget_id.is_empty():

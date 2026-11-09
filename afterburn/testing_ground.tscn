@@ -64,6 +64,5 @@ power_node = NodePath("../Power")
 loadout_ui = NodePath("../LoadoutUI")
 
 [node name="GameOverScreen" parent="." unique_id=1255077973 instance=ExtResource("ext_game_over_screen")]
-main_menu_scene_path = null
 
 [connection signal="body_entered" from="Row_Detector" to="." method="_on_row_detector_body_entered"]
