@@ -13,10 +13,10 @@ signal dashing # A signal for when dashing
 @onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
 @onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
-@onready var timer: Timer = $Timer
 @onready var model: Node3D = get_node_or_null("Body/Main Character Placeholder")
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
+@export var game_over_screen: CanvasLayer
 
 # Constants
 const MIN_ROW_INDEX: int = -2 # The minimum row
@@ -262,22 +262,14 @@ func _on_power_invincibility_changed(is_invincible: bool) -> void:
 var time_left: int = 3
 
 ## Runs on losing the game
-func lose(): 
+func lose() -> void: 
 	print("YOU LOST")
-	$Timer/GameOverScreen.show()
-	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
-
-## Runs after the respawn timer ends
-func _on_timer_timeout() -> void:
-	time_left -= 1
-	$Timer/GameOverScreen/Control/Button/Countdown.text = str("Respawning in " + str(time_left))
-	
-	if time_left <= 0:
-		get_tree().reload_current_scene()
-
-func _on_button_pressed() -> void:
-	$Timer/GameOverScreen/Control/Button/Countdown.show()
-	timer.start()
+	if game_over_screen and game_over_screen.has_method("show_game_over"):
+		game_over_screen.show_game_over()
+	else:
+		var go_node = get_node_or_null("../GameOverScreen")
+		if go_node and go_node.has_method("show_game_over"):
+			go_node.show_game_over()
 
 ## Begins the sliding state
 func slide():
