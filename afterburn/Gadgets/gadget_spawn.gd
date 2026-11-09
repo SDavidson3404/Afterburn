@@ -26,8 +26,12 @@ func _get_player_body() -> Node3D:
 	return body_node as Node3D if body_node else target_body
 
 func _physics_process(delta: float) -> void:
+	# Halt spawner process while sitting in menus or when run is inactive
+	if power_mgr == null or not power_mgr.get("is_run_active"):
+		return
+
 	var body := _get_player_body()
-	if body == null or power_mgr == null:
+	if body == null:
 		return
 
 	# Accumulate elapsed time for gadget interval
