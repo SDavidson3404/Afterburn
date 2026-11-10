@@ -43,7 +43,7 @@ func _resolve_gadget_type_and_color() -> void:
 	_apply_gadget_color()
 
 
-## Programmatically overrides the mesh material to color-code the pickup in 3D space.
+## Programmatically overrides mesh material and light node color to color-code the pickup in 3D space.
 func _apply_gadget_color() -> void:
 	var mesh_node := get_node_or_null("MeshInstance3D") as MeshInstance3D
 	if not mesh_node:
@@ -64,6 +64,11 @@ func _apply_gadget_color() -> void:
 	material.emission_energy_multiplier = 1.5
 
 	mesh_node.material_override = material
+
+	# Sync OmniLight3D light color with active gadget type
+	var light_node := get_node_or_null("OmniLight3D") as OmniLight3D
+	if light_node:
+		light_node.light_color = gadget_color
 
 
 ## Handles player intersection, triggering ability effects and freeing the pickup node.

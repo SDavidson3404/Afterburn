@@ -101,7 +101,7 @@ func spawn_crystal() -> void:
 	var spawn_pos: Vector3 = target_body.global_position
 	spawn_pos += -target_body.global_transform.basis.z * spawn_distance
 	spawn_pos.x = x_offset
-	spawn_pos.y = randf_range(1.5, 2.5)
+	spawn_pos.y = 1.8 # Uniform height ensuring slide & jump pickup consistency
 
 	crystal.global_position = spawn_pos
 	

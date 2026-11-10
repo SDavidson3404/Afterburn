@@ -44,8 +44,8 @@ func _spawn_gadget_pickup_at(pos: Vector3, scene: Node) -> void:
 	if pickup_scene:
 		var pickup = pickup_scene.instantiate() as Node3D
 		scene.add_child(pickup)
-		# Lock Y-position to 1.0 unit so pickups float uniformly above the track floor
-		pickup.global_position = Vector3(pos.x, 1.0, pos.z)
+		# Uniform Y-position ensuring slide & jump pickup consistency
+		pickup.global_position = Vector3(pos.x, 1.8, pos.z)
 		
 		var gadget_name_str: String = "Gadget"
 		if "gadget_type" in pickup:

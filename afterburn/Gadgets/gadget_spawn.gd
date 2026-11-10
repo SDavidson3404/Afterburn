@@ -91,7 +91,7 @@ func _spawn_gadget() -> void:
 	var spawn_pos: Vector3 = body.global_position
 	spawn_pos += -body.global_transform.basis.z * spawn_distance_ahead
 	spawn_pos.x = x_offset
-	spawn_pos.y = 1.0
+	spawn_pos.y = 1.8 # Uniform height ensuring slide & jump pickup consistency
 
 	gadget_instance.global_position = spawn_pos
 	_active_gadget = gadget_instance
