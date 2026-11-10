@@ -283,6 +283,11 @@ func try_use_loadout_gadget() -> void:
 	if not selected_gadget or not is_run_active or not is_gadget_ready or not player:
 		return
 
+	# Prevent activation if a track pickup of the same gadget type is currently active
+	if _is_selected_gadget_active():
+		print("[GADGET BLOCKED] Cannot activate selected gadget while a pickup instance of ", selected_gadget.gadget_name, " is active.")
+		return
+
 	var gadget_display_name: String = selected_gadget.gadget_name if "gadget_name" in selected_gadget else "Gadget"
 	print("[GADGET ACTIVATED] Activated selected loadout gadget: ", gadget_display_name)
 
