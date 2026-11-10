@@ -191,12 +191,16 @@ func connect_obstacle(obstacle: Node3D, row_ref: Node3D) -> void:
 		obstacle.body_entered.connect(_on_obstacle_body_entered.bind(obstacle))
 
 
-## Runs on body entering an obstacle. Flags row hit status to prevent dodge points.
+## Runs on body entering an obstacle. Flags row hit status to prevent dodge points and duplicate hits.
 func _on_obstacle_body_entered(body: Node3D, obstacle: Obstacle) -> void:
 	if body.is_in_group("Player"):
 		var row_ref = obstacle.get_meta("row_ref", null)
 		if is_instance_valid(row_ref):
+			# If this row has already registered a hit against the player, ignore subsequent entries
+			if row_ref.get_meta("hit", false):
+				return
 			row_ref.set_meta("hit", true)
+			
 		if player and player.has_method("cancel_dodge_maneuver"):
 			player.cancel_dodge_maneuver()
 		power.obstacle_hit()
