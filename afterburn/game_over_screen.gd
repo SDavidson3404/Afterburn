@@ -31,11 +31,11 @@ func _update_run_stats() -> void:
 		var total_dodges: int = DatabaseManager.jump_obstacle + DatabaseManager.slide_obstacle
 		
 		stats_label.text = (
-			"FINAL SCORE: %d\n" % DatabaseManager.display_score() +
-			"Distance: %dm\n" % DatabaseManager.total_distance_meters +
-			"Crystals Collected: %d\n" % DatabaseManager.power_crystals +
-			"Obstacles Dodged: %d\n" % total_dodges +
-			"Gadgets Picked Up: %d" % DatabaseManager.gadgets
+			"FINAL SCORE: %s\n" % DatabaseManager.format_number(DatabaseManager.display_score()) +
+			"Distance: %sm\n" % DatabaseManager.format_number(DatabaseManager.total_distance_meters) +
+			"Crystals Collected: %s\n" % DatabaseManager.format_number(DatabaseManager.power_crystals) +
+			"Obstacles Dodged: %s\n" % DatabaseManager.format_number(total_dodges) +
+			"Gadgets Picked Up: %s" % DatabaseManager.format_number(DatabaseManager.gadgets)
 		)
 	else:
 		stats_label.text = "Stats Unavailable"

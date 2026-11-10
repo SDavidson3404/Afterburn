@@ -128,6 +128,22 @@ func save_run() -> Dictionary:
 	return run_data
 
 
+## Formats an integer value with commas as thousand separators.
+static func format_number(value: int) -> String:
+	var s: String = str(value)
+	var negative: bool = s.begins_with("-")
+	if negative:
+		s = s.substr(1)
+	var result: String = ""
+	var digit_count: int = 0
+	for i in range(s.length() - 1, -1, -1):
+		if digit_count > 0 and digit_count % 3 == 0:
+			result = "," + result
+		result = s[i] + result
+		digit_count += 1
+	return ("-" if negative else "") + result
+
+
 ## Zeroes active run statistics counters in preparation for a new run.
 func reset_run_stats() -> void:
 	total_distance_meters = 0

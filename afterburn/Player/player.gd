@@ -136,7 +136,7 @@ func _physics_process(delta: float) -> void:
 	
 	# Update text to reflect current speed and score
 	speed_label.text = ("SPEED(MPS): " + "%.1f" % current_speed)
-	score_label.text = ("SCORE: " + str(DatabaseManager.display_score()))
+	score_label.text = ("SCORE: " + DatabaseManager.format_number(DatabaseManager.display_score()))
 	
 	# Update the row squares
 	update_row_square()

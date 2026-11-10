@@ -123,16 +123,16 @@ func _update_lifetime_stats_display() -> void:
 			return
 
 		stats_label.text = (
-			"Total Runs: %d\n" % stats.get("total_runs", 0) +
-			"High Score: %d\n" % stats.get("high_score", 0) +
-			"Lifetime Score: %d\n" % stats.get("total_lifetime_score", 0) +
-			"Max Distance: %dm\n" % stats.get("max_distance", 0) +
-			"Total Distance: %dm\n" % stats.get("total_distance", 0) +
-			"Max Crystals: %d\n" % stats.get("max_crystals", 0) +
-			"Total Crystals: %d\n" % stats.get("total_crystals", 0) +
-			"Max Dodges: %d\n" % stats.get("max_dodges", 0) +
-			"Total Dodges: %d\n" % stats.get("total_dodges", 0) +
-			"Gadgets Collected: %d" % stats.get("total_gadgets", 0)
+			"Total Runs: %s\n" % DatabaseManager.format_number(stats.get("total_runs", 0)) +
+			"High Score: %s\n" % DatabaseManager.format_number(stats.get("high_score", 0)) +
+			"Lifetime Score: %s\n" % DatabaseManager.format_number(stats.get("total_lifetime_score", 0)) +
+			"Max Distance: %sm\n" % DatabaseManager.format_number(stats.get("max_distance", 0)) +
+			"Total Distance: %sm\n" % DatabaseManager.format_number(stats.get("total_distance", 0)) +
+			"Max Crystals: %s\n" % DatabaseManager.format_number(stats.get("max_crystals", 0)) +
+			"Total Crystals: %s\n" % DatabaseManager.format_number(stats.get("total_crystals", 0)) +
+			"Max Dodges: %s\n" % DatabaseManager.format_number(stats.get("max_dodges", 0)) +
+			"Total Dodges: %s\n" % DatabaseManager.format_number(stats.get("total_dodges", 0)) +
+			"Gadgets Collected: %s" % DatabaseManager.format_number(stats.get("total_gadgets", 0))
 		)
 	else:
 		stats_label.text = "Database not connected."
