@@ -129,7 +129,7 @@ func save_run() -> Dictionary:
 
 
 ## Formats an integer value with commas as thousand separators.
-static func format_number(value: int) -> String:
+func format_number(value: int) -> String:
 	var s: String = str(value)
 	var negative: bool = s.begins_with("-")
 	if negative:
