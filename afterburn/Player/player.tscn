@@ -149,40 +149,40 @@ metadata/_edit_use_anchors_ = true
 
 [node name="Power Meter" type="ProgressBar" parent="Body/UI" unique_id=267632114]
 offset_left = 391.0
-offset_top = 59.0
+offset_top = 595.0
 offset_right = 712.0
-offset_bottom = 86.0
+offset_bottom = 622.0
 show_percentage = false
 
 [node name="Row_Squares" type="Node2D" parent="Body/UI" unique_id=893208432]
 
 [node name="Row1" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1916899024]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(448, 32)
+position = Vector2(448, 560)
 scale = Vector2(40.5, 41.5)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row2" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1579182820]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(501, 32)
+position = Vector2(501, 560)
 scale = Vector2(40.5, 41.5)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row3" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=210266865]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(551.99994, 32)
+position = Vector2(551.99994, 560)
 scale = Vector2(40.5, 41.5)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row4" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=833332831]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(604, 32)
+position = Vector2(604, 560)
 scale = Vector2(40.5, 41.5)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row5" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1275927668]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(655, 32)
+position = Vector2(655, 560)
 scale = Vector2(40.5, 41.5)
 mesh = SubResource("BoxMesh_jp6wc")
 
