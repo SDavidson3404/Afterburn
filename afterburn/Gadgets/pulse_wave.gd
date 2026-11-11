@@ -18,7 +18,7 @@ func apply_loadout_nerf(power_manager: Node) -> void:
 
 
 ## Activates shockwave: Destroys oncoming obstacles and rolls for a bonus gadget drop per obstacle.
-func activate_ability(player: Node3D, power_manager: Node) -> void:
+func activate_ability(player: Node3D, power_manager: Node, _is_from_loadout: bool = false) -> void:
 	var obstacles = player.get_tree().get_nodes_in_group("Obstacles")
 	var player_pos: Vector3 = player.body.global_position
 

@@ -20,7 +20,7 @@ func apply_loadout_nerf(_power_manager: Node) -> void:
 
 
 ## Virtual method: Overridden by child classes to execute active ability logic.
-func activate_ability(_player: Node3D, _power_manager: Node) -> void:
+func activate_ability(_player: Node3D, _power_manager: Node, _is_from_loadout: bool = false) -> void:
 	pass
 
 

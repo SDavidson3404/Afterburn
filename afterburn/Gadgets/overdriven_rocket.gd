@@ -15,6 +15,6 @@ func apply_loadout_nerf(power_manager: Node) -> void:
 
 
 ## Activates overcharged rocket state, suspending passive fuel drain for a timed window.
-func activate_ability(_player: Node3D, power_manager: Node) -> void:
+func activate_ability(_player: Node3D, power_manager: Node, _is_from_loadout: bool = false) -> void:
 	if power_manager and power_manager.has_method("activate_overdrive_rocket"):
 		power_manager.activate_overdrive_rocket()

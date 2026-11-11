@@ -14,7 +14,7 @@ func apply_loadout_nerf(power_manager: Node) -> void:
 
 
 ## Activates magnet field or refreshes active duration if already running.
-func activate_ability(player: Node3D, _power_manager: Node) -> void:
+func activate_ability(player: Node3D, _power_manager: Node, _is_from_loadout: bool = false) -> void:
 	var existing = player.get_node_or_null("MagnetInstance") as MagnetInstance
 	if existing:
 		existing.duration = existing.max_duration

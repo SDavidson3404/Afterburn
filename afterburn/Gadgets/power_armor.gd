@@ -18,11 +18,13 @@ func apply_loadout_nerf(power_manager: Node) -> void:
 
 
 ## Activates power armor shield or refreshes remaining hit capacity if already active.
-func activate_ability(player: Node3D, power_manager: Node) -> void:
+func activate_ability(player: Node3D, power_manager: Node, is_from_loadout: bool = false) -> void:
 	# Refresh hit pool if an armor instance is currently active on the player
 	var existing = player.get_node_or_null("PowerArmorInstance") as PowerArmorInstance
 	if existing:
 		existing.hits_remaining = existing.max_hits
+		if is_from_loadout:
+			existing.is_from_loadout = true
 		return
 
 	# Construct and attach new temporary PowerArmorInstance component
@@ -30,6 +32,7 @@ func activate_ability(player: Node3D, power_manager: Node) -> void:
 	active_armor.max_hits = max_hits
 	active_armor.hits_remaining = max_hits
 	active_armor.power_manager = power_manager
+	active_armor.is_from_loadout = is_from_loadout
 	active_armor.name = "PowerArmorInstance"
 	player.add_child(active_armor)
 
@@ -44,6 +47,9 @@ class PowerArmorInstance extends Node:
 	
 	## Reference to the main power manager node.
 	var power_manager: Node = null
+
+	## Whether this armor instance was created via loadout gadget activation.
+	var is_from_loadout: bool = false
 
 
 	func _ready() -> void:

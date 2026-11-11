@@ -313,7 +313,7 @@ func try_use_loadout_gadget() -> void:
 	var gadget_display_name: String = selected_gadget.gadget_name if "gadget_name" in selected_gadget else "Gadget"
 	print("[GADGET ACTIVATED] Activated selected loadout gadget: ", gadget_display_name)
 
-	selected_gadget.activate_ability(player, self)
+	selected_gadget.activate_ability(player, self, true)
 		
 	is_gadget_ready = false
 	if selected_gadget.gadget_id != "power_armor":
@@ -363,13 +363,15 @@ func register_armor_layer(armor_node: Node) -> void:
 	active_armor_layers.append(armor_node)
 
 
-## Unregisters broken Power Armor shield layer and puts armor gadget back on cooldown.
+## Unregisters broken Power Armor shield layer and puts armor gadget back on cooldown if it was loadout armor.
 func unregister_armor_layer(armor_node: Node) -> void:
 	active_armor_layers.erase(armor_node)
 	if selected_gadget and selected_gadget.gadget_id == "power_armor":
-		is_gadget_ready = false
-		gadget_cooldown_progress = 1.0
-		gadget_cooldown_changed.emit(1.0, false)
+		var is_loadout: bool = armor_node.get("is_from_loadout") == true
+		if is_loadout:
+			is_gadget_ready = false
+			gadget_cooldown_progress = 1.0
+			gadget_cooldown_changed.emit(1.0, false)
 
 
 ## Intercepts collision damage through active armor, overdrive rocket stacks, or suit power meter.
