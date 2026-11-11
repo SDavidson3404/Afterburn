@@ -135,26 +135,45 @@ func _update_circle_stack() -> void:
 		active_circles.append(c)
 		right_index += 1
 
-	# 3. Draining & queued Overdriven Rocket circles (Smaller circles on the left side of screen)
+	# 3. Draining & queued Overdriven Rocket circles (Displayed evenly above the power meter height-wise)
 	if is_overcharged_state and "overdrive_rocket_timers" in power_node:
 		var rocket_timers: Array = power_node.overdrive_rocket_timers
-		var small_rad: float = radius * 0.55
-		var left_global_base := Vector2(35.0, 145.0) # Screen coordinates below speed label
-		
-		for i in range(rocket_timers.size()):
-			var stack_circle := _create_circle_data("overdriven_rocket")
-			stack_circle.circle_radius = small_rad
-			var target_screen_pos := Vector2(left_global_base.x, left_global_base.y + i * (small_rad * 2.5))
-			stack_circle.draw_pos = to_local(target_screen_pos)
+		var count: int = rocket_timers.size()
+		if count > 0:
+			# Query global rect of Power Meter bar or fallback to default coordinates
+			var pm_rect := Rect2(391.0, 585.0, 321.0, 27.0)
+			if player:
+				var pm = player.get_node_or_null("Body/UI/Power Meter") as Control
+				if pm:
+					pm_rect = pm.get_global_rect()
+
+			var max_slots: int = 10
+			var slot_width: float = pm_rect.size.x / float(max_slots)
+			var circle_rad: float = clampf(slot_width * 0.35, 6.0, 12.0)
 			
-			if i == 0:
-				# Active draining rocket
-				stack_circle.fill_ratio = clampf(float(rocket_timers[0]) / power_node.overdrive_rocket_max_duration, 0.0, 1.0)
-			else:
-				# Queued rockets waiting to drain
-				stack_circle.fill_ratio = 1.0
-			
-			active_circles.append(stack_circle)
+			# Position center_y height-wise above the top boundary of the Power Meter bar
+			var margin_above: float = 6.0
+			var center_y: float = pm_rect.position.y - circle_rad - margin_above
+
+			for i in range(count):
+				# The most recent rocket (i = count - 1) appears on the left (slot 0).
+				# The active draining rocket (i = 0) is pushed further to the right (slot count - 1).
+				var slot_index: int = (count - 1) - i
+				var slot_x: float = pm_rect.position.x + (float(slot_index) + 0.5) * slot_width
+				var target_screen_pos := Vector2(slot_x, center_y)
+
+				var stack_circle := _create_circle_data("overdriven_rocket")
+				stack_circle.circle_radius = circle_rad
+				stack_circle.draw_pos = to_local(target_screen_pos)
+
+				if i == 0:
+					# Active draining rocket
+					stack_circle.fill_ratio = clampf(float(rocket_timers[0]) / power_node.overdrive_rocket_max_duration, 0.0, 1.0)
+				else:
+					# Queued rockets waiting to drain
+					stack_circle.fill_ratio = 1.0
+
+				active_circles.append(stack_circle)
 
 
 ## Helper method to construct and append secondary right-side HUD indicators.
