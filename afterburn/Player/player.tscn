@@ -149,9 +149,9 @@ metadata/_edit_use_anchors_ = true
 
 [node name="Power Meter" type="ProgressBar" parent="Body/UI" unique_id=267632114]
 offset_left = 391.0
-offset_top = 575.0
+offset_top = 585.0
 offset_right = 712.0
-offset_bottom = 602.0
+offset_bottom = 612.0
 show_percentage = false
 
 [node name="Row_Squares" type="Node2D" parent="Body/UI" unique_id=893208432]

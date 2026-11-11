@@ -55,12 +55,13 @@ var coasting_deceleration_multiplier: float = 1.0
 var gadget_cooldown_progress: float = 0.0
 var is_gadget_ready: bool = true
 
-# Overdriven Rocket state flags (overdrive_rocket_max_duration represents 40 fuel units = 8s flight at base drain)
+## Overdriven Rocket state flags (overdrive_rocket_max_duration represents 50 fuel units)
 var has_overdriven_rocket: bool = false
 var is_overdrive_surge: bool = false
 var is_overcharged: bool = false
 var overdrive_rocket_timer: float = 0.0
 var overdrive_rocket_max_duration: float = 50.0
+var overdrive_rocket_timers: Array[float] = []
 
 # Armor interception registry and runtime state trackers
 var active_armor_layers: Array = []
@@ -83,6 +84,7 @@ func start_run() -> void:
 	# Reset suit modifiers and overdrive states to baseline defaults
 	is_overcharged = false
 	overdrive_rocket_timer = 0.0
+	overdrive_rocket_timers.clear()
 	speed_acceleration = 0.25
 	max_power = 100.0
 	crystal_power_yield = 1.0
@@ -160,11 +162,23 @@ func _process(delta: float) -> void:
 	
 	else:
 		if is_overcharged:
-			# Rocket Overcharge state bypasses standard suit fuel drain
+			# Drain the active rocket timer at the front of the queue
 			var active_drain: float = power_drain_rate * passive_drain_multiplier
-			overdrive_rocket_timer = maxf(0.0, overdrive_rocket_timer - (active_drain * delta))
-			if overdrive_rocket_timer <= 0.0:
+			if not overdrive_rocket_timers.is_empty():
+				overdrive_rocket_timers[0] = maxf(0.0, overdrive_rocket_timers[0] - (active_drain * delta))
+				overdrive_rocket_timer = overdrive_rocket_timers[0]
+				
+				# Pop depleted rocket stack and advance to the next queued stack
+				if overdrive_rocket_timers[0] <= 0.0:
+					overdrive_rocket_timers.pop_front()
+					if overdrive_rocket_timers.is_empty():
+						is_overcharged = false
+						overdrive_rocket_timer = 0.0
+					else:
+						overdrive_rocket_timer = overdrive_rocket_timers[0]
+			else:
 				is_overcharged = false
+				overdrive_rocket_timer = 0.0
 		else:
 			if not was_invincible_this_frame:
 				var active_drain: float = power_drain_rate * passive_drain_multiplier
@@ -197,8 +211,10 @@ func collect_crystal() -> void:
 	
 	current_power = clampf(current_power + (100.0 * crystal_power_yield), 0.0, max_power)
 	
-	if is_overcharged and overdrive_rocket_timer > 0.0:
-		overdrive_rocket_timer = clampf(overdrive_rocket_timer + (overdrive_rocket_max_duration * crystal_power_yield), 0.0, overdrive_rocket_max_duration)
+	# Refill active draining rocket timer
+	if is_overcharged and not overdrive_rocket_timers.is_empty():
+		overdrive_rocket_timers[0] = clampf(overdrive_rocket_timers[0] + (overdrive_rocket_max_duration * crystal_power_yield), 0.0, overdrive_rocket_max_duration)
+		overdrive_rocket_timer = overdrive_rocket_timers[0]
 	
 	if is_overdrive_surge:
 		is_overdrive_surge = false
@@ -219,7 +235,7 @@ func collect_crystal() -> void:
 		
 	power_changed.emit(current_power, max_power)
 	
-	# Reduce equipped gadget cooldown if player is running at target speed without an active ability running
+	# Overdriven Rocket bypasses active state checks to allow instant cooldown recharging
 	if selected_gadget and not is_gadget_ready and is_at_target_speed():
 		if _is_selected_gadget_active():
 			return
@@ -237,7 +253,8 @@ func _is_selected_gadget_active() -> bool:
 	
 	match selected_gadget.gadget_id:
 		"overdriven_rocket":
-			return is_overcharged
+			# Returns false to allow re-activation while active and enable immediate cooldown charging
+			return false
 		"power_armor":
 			return active_armor_layers.size() > 0
 		"hoverboard":
@@ -299,10 +316,11 @@ func try_use_loadout_gadget() -> void:
 		gadget_cooldown_changed.emit(1.0, false)
 
 
-## Engages overcharged rocket suit state for maximum active duration.
+## Engages overcharged rocket suit state and appends a new rocket stack to the queue.
 func activate_overdrive_rocket() -> void:
 	is_overcharged = true
-	overdrive_rocket_timer = overdrive_rocket_max_duration
+	overdrive_rocket_timers.append(overdrive_rocket_max_duration)
+	overdrive_rocket_timer = overdrive_rocket_timers[0]
 	if is_overdrive_surge or is_coasting:
 		is_overdrive_surge = false
 		is_coasting = false
@@ -342,7 +360,7 @@ func unregister_armor_layer(armor_node: Node) -> void:
 		gadget_cooldown_changed.emit(1.0, false)
 
 
-## Intercepts collision damage through active armor, overdrive rocket, or suit power meter.
+## Intercepts collision damage through active armor, overdrive rocket stacks, or suit power meter.
 func obstacle_hit(damage: float = 25.0) -> void:
 	if not is_run_active or is_invincible:
 		return
@@ -365,17 +383,29 @@ func obstacle_hit(damage: float = 25.0) -> void:
 	
 	var total_damage: float = damage * obstacle_damage_multiplier
 
-	# Deduct damage from overcharged rocket duration before affecting main power meter
-	if is_overcharged:
-		if overdrive_rocket_timer > total_damage:
-			overdrive_rocket_timer -= total_damage
+	# Deduct damage from overcharged rocket stacks before affecting suit power
+	if is_overcharged and not overdrive_rocket_timers.is_empty():
+		var remaining_damage: float = total_damage
+		while remaining_damage > 0.0 and not overdrive_rocket_timers.is_empty():
+			if overdrive_rocket_timers[0] > remaining_damage:
+				overdrive_rocket_timers[0] -= remaining_damage
+				remaining_damage = 0.0
+			else:
+				remaining_damage -= overdrive_rocket_timers[0]
+				overdrive_rocket_timers.pop_front()
+		
+		if overdrive_rocket_timers.is_empty():
+			is_overcharged = false
+			overdrive_rocket_timer = 0.0
+			print("[OBSTACLE HIT] Rocket Overcharge shield depleted by obstacle hit!")
+		else:
+			overdrive_rocket_timer = overdrive_rocket_timers[0]
 			print("[OBSTACLE HIT] Rocket Overcharge absorbed hit! Remaining fuel timer: ", "%.1f" % overdrive_rocket_timer, "s")
+		
+		if remaining_damage <= 0.0:
 			return
 		else:
-			total_damage -= overdrive_rocket_timer
-			overdrive_rocket_timer = 0.0
-			is_overcharged = false
-			print("[OBSTACLE HIT] Rocket Overcharge shield depleted by obstacle hit!")
+			total_damage = remaining_damage
 
 	current_power = maxf(0.0, current_power - total_damage)
 	print("[OBSTACLE HIT] Hit obstacle! Damage taken: ", "%.1f" % total_damage, " | Remaining Power: ", "%.1f" % current_power)
