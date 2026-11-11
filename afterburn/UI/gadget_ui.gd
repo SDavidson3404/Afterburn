@@ -135,7 +135,7 @@ func _update_circle_stack() -> void:
 		active_circles.append(c)
 		right_index += 1
 
-	# 3. Draining & queued Overdriven Rocket circles (Displayed evenly above the power meter height-wise)
+	# 3. Draining & queued Overdriven Rocket circles (Displayed on the left side above the power meter)
 	if is_overcharged_state and "overdrive_rocket_timers" in power_node:
 		var rocket_timers: Array = power_node.overdrive_rocket_timers
 		var count: int = rocket_timers.size()
@@ -147,19 +147,16 @@ func _update_circle_stack() -> void:
 				if pm:
 					pm_rect = pm.get_global_rect()
 
-			var max_slots: int = 10
-			var slot_width: float = pm_rect.size.x / float(max_slots)
-			var circle_rad: float = clampf(slot_width * 0.35, 6.0, 12.0)
-			
-			# Position center_y height-wise above the top boundary of the Power Meter bar
+			var circle_rad: float = 12.0
+			var slot_spacing: float = 30.0
+			var margin_left: float = 14.0
 			var margin_above: float = 6.0
 			var center_y: float = pm_rect.position.y - circle_rad - margin_above
 
 			for i in range(count):
-				# The most recent rocket (i = count - 1) appears on the left (slot 0).
-				# The active draining rocket (i = 0) is pushed further to the right (slot count - 1).
+				# Slot 0 represents the leftmost position aligned with the start of the Power Meter
 				var slot_index: int = (count - 1) - i
-				var slot_x: float = pm_rect.position.x + (float(slot_index) + 0.5) * slot_width
+				var slot_x: float = pm_rect.position.x + margin_left + (float(slot_index) * slot_spacing)
 				var target_screen_pos := Vector2(slot_x, center_y)
 
 				var stack_circle := _create_circle_data("overdriven_rocket")

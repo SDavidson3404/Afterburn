@@ -12,9 +12,9 @@ func _init() -> void:
 	gadget_id = "power_armor"
 
 
-## Applies loadout handicap: Increases base obstacle collision damage by 60%.
+## Applies loadout handicap: Increases base obstacle collision damage by 20%.
 func apply_loadout_nerf(power_manager: Node) -> void:
-	power_manager.obstacle_damage_multiplier = 1.6
+	power_manager.obstacle_damage_multiplier = 1.2
 
 
 ## Activates power armor shield or refreshes remaining hit capacity if already active.

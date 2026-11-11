@@ -305,9 +305,9 @@ func try_use_loadout_gadget() -> void:
 		print("[GADGET BLOCKED] Cannot activate selected gadget while a pickup instance of ", selected_gadget.gadget_name, " is active.")
 		return
 
-	# Prevent activation if Overdriven Rocket is selected and the stack is already full (10)
-	if selected_gadget.gadget_id == "overdriven_rocket" and overdrive_rocket_timers.size() >= 10:
-		print("[GADGET BLOCKED] Cannot activate Overdriven Rocket: Stack is at maximum capacity (10).")
+	# Prevent activation if Overdriven Rocket is selected and the stack is already full (3)
+	if selected_gadget.gadget_id == "overdriven_rocket" and overdrive_rocket_timers.size() >= 3:
+		print("[GADGET BLOCKED] Cannot activate Overdriven Rocket: Stack is at maximum capacity (3).")
 		return
 
 	var gadget_display_name: String = selected_gadget.gadget_name if "gadget_name" in selected_gadget else "Gadget"
@@ -324,11 +324,11 @@ func try_use_loadout_gadget() -> void:
 ## Engages overcharged rocket suit state and appends a new rocket stack to the queue.
 func activate_overdrive_rocket() -> void:
 	is_overcharged = true
-	if overdrive_rocket_timers.size() >= 10:
+	if overdrive_rocket_timers.size() >= 3:
 		if not overdrive_rocket_timers.is_empty():
 			overdrive_rocket_timers[0] = overdrive_rocket_max_duration
 			overdrive_rocket_timer = overdrive_rocket_timers[0]
-			print("[OVERDRIVE ROCKET] Stack full (10)! Refilled power of active draining rocket.")
+			print("[OVERDRIVE ROCKET] Stack full (3)! Refilled power of active draining rocket.")
 	else:
 		overdrive_rocket_timers.append(overdrive_rocket_max_duration)
 		overdrive_rocket_timer = overdrive_rocket_timers[0]

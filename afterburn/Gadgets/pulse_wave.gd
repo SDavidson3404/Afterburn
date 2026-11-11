@@ -4,7 +4,7 @@ extends GadgetBase
 
 @export_category("Ability Properties")
 ## Probability (0.0 to 1.0) of spawning a gadget pickup when an obstacle is cleared.
-@export var gadget_drop_chance: float = 0.10
+@export var gadget_drop_chance: float = 0.12
 
 
 func _init() -> void:
