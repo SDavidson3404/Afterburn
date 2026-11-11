@@ -295,7 +295,7 @@ func find_optimal_distance() -> float:
 	var clamped_spd: float = clampf(target_spd, base_spd, max_spd)
 
 	var base_rate: float = 1.0 / 1.50
-	var max_rate: float = base_rate * 12.0
+	var max_rate: float = base_rate * 10.0
 
 	var current_rate: float = remap(clamped_spd, base_spd, max_spd, base_rate, max_rate)
 	return clamped_spd / current_rate
