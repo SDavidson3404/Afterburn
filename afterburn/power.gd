@@ -204,23 +204,23 @@ func _process(delta: float) -> void:
 				_set_invincible(false)
 
 
-## Triggers power refill, restores coasting/surge states, and processes gadget cooldown reduction.
+## Triggers power refill and processes gadget cooldown reduction.
 func collect_crystal() -> void:
 	if not is_run_active:
 		return
-	
+
 	current_power = clampf(current_power + (100.0 * crystal_power_yield), 0.0, max_power)
-	
+
 	# Refill active draining rocket timer
 	if is_overcharged and not overdrive_rocket_timers.is_empty():
 		overdrive_rocket_timers[0] = clampf(overdrive_rocket_timers[0] + (overdrive_rocket_max_duration * crystal_power_yield), 0.0, overdrive_rocket_max_duration)
 		overdrive_rocket_timer = overdrive_rocket_timers[0]
-	
+
 	if is_overdrive_surge:
 		is_overdrive_surge = false
 		current_speed = target_speed
 	is_coasting = false
-	
+
 	# Grant catch-up invincibility if collecting a crystal while running below target speed
 	var speed_ratio: float = current_speed / target_speed if target_speed > 0.0 else 1.0
 	if current_speed < target_speed:
@@ -232,10 +232,10 @@ func collect_crystal() -> void:
 	else:
 		_set_invincible(false)
 		speed_recovery_timer = 0.0
-		
+
 	power_changed.emit(current_power, max_power)
-	
-	# Overdriven Rocket bypasses active state checks to allow instant cooldown recharging
+
+	# Reduce cooldown on crystal collection only when the selected gadget is not active
 	if selected_gadget and not is_gadget_ready and is_at_target_speed():
 		if _is_selected_gadget_active():
 			return
@@ -297,15 +297,39 @@ func reduce_gadget_cooldown(amount: float) -> void:
 
 ## Polymorphically triggers equipped gadget active power if ready and sets initial cooldown state.
 func try_use_loadout_gadget() -> void:
-	if not selected_gadget or not is_run_active or not is_gadget_ready or not player:
+	if not selected_gadget or not is_run_active or not player:
 		return
 
-	# Prevent activation if a track pickup of the same gadget type is currently active
+	# Prevent activation if armor or pickup instance of the same gadget is currently active
 	if _is_selected_gadget_active():
-		print("[GADGET BLOCKED] Cannot activate selected gadget while a pickup instance of ", selected_gadget.gadget_name, " is active.")
+		print("[GADGET BLOCKED] Cannot activate selected gadget while an instance of ", selected_gadget.gadget_name, " is active.")
 		return
 
-	# Prevent activation if Overdriven Rocket is selected and the stack is already full (3)
+	# Special partial-activation logic for Power Armor
+	if selected_gadget.gadget_id == "power_armor":
+		var recharges: int = 6 if is_gadget_ready else clampi(int(round((1.0 - gadget_cooldown_progress) * 6.0)), 0, 6)
+		if recharges < 2:
+			print("[GADGET BLOCKED] Power Armor requires at least 2/6 recharge to activate (Current: ", recharges, "/6).")
+			return
+
+		@warning_ignore("integer_division")
+		var hits_to_grant: int = recharges / 2
+		var recharges_consumed: int = hits_to_grant * 2
+		var remaining_recharges: int = recharges - recharges_consumed
+
+		print("[GADGET ACTIVATED] Power Armor activated with ", recharges, "/6 recharge! Hits granted: ", hits_to_grant, " | Subtracted: ", recharges_consumed, " | Remaining: ", remaining_recharges, "/6")
+		selected_gadget.activate_ability(player, self, true, hits_to_grant)
+
+		gadget_cooldown_progress = 1.0 - (float(remaining_recharges) / 6.0)
+		is_gadget_ready = (remaining_recharges == 6)
+		gadget_cooldown_changed.emit(gadget_cooldown_progress, is_gadget_ready)
+		return
+
+	# Standard gadget activation (requires full cooldown readiness)
+	if not is_gadget_ready:
+		return
+
+	# Prevent activation if Overdriven Rocket stack is full (3)
 	if selected_gadget.gadget_id == "overdriven_rocket" and overdrive_rocket_timers.size() >= 3:
 		print("[GADGET BLOCKED] Cannot activate Overdriven Rocket: Stack is at maximum capacity (3).")
 		return
@@ -314,11 +338,10 @@ func try_use_loadout_gadget() -> void:
 	print("[GADGET ACTIVATED] Activated selected loadout gadget: ", gadget_display_name)
 
 	selected_gadget.activate_ability(player, self, true)
-		
+
 	is_gadget_ready = false
-	if selected_gadget.gadget_id != "power_armor":
-		gadget_cooldown_progress = 1.0
-		gadget_cooldown_changed.emit(1.0, false)
+	gadget_cooldown_progress = 1.0
+	gadget_cooldown_changed.emit(1.0, false)
 
 
 ## Engages overcharged rocket suit state and appends a new rocket stack to the queue.
@@ -363,15 +386,9 @@ func register_armor_layer(armor_node: Node) -> void:
 	active_armor_layers.append(armor_node)
 
 
-## Unregisters broken Power Armor shield layer and puts armor gadget back on cooldown if it was loadout armor.
+## Unregisters broken Power Armor shield layer.
 func unregister_armor_layer(armor_node: Node) -> void:
 	active_armor_layers.erase(armor_node)
-	if selected_gadget and selected_gadget.gadget_id == "power_armor":
-		var is_loadout: bool = armor_node.get("is_from_loadout") == true
-		if is_loadout:
-			is_gadget_ready = false
-			gadget_cooldown_progress = 1.0
-			gadget_cooldown_changed.emit(1.0, false)
 
 
 ## Intercepts collision damage through active armor, overdrive rocket stacks, or suit power meter.
