@@ -8,7 +8,9 @@
 shading_mode = 0
 albedo_color = Color(0.8980392, 0.2, 0.85490197, 1)
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_pfmmc"]
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_pfmmc"]
+height = 3.2
+radius = 0.8
 
 [node name="GadgetPickup" type="Area3D" unique_id=677913613]
 script = ExtResource("1_m6nkf")
@@ -18,4 +20,9 @@ mesh = SubResource("SphereMesh_ni0ne")
 surface_material_override/0 = SubResource("StandardMaterial3D_iusrd")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=579536525]
-shape = SubResource("SphereShape3D_pfmmc")
+shape = SubResource("CylinderShape3D_pfmmc")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=884920192]
+light_color = Color(1, 1, 1, 1)
+light_energy = 3.0
+omni_range = 10.0

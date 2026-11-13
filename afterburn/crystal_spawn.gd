@@ -60,6 +60,10 @@ func _process(delta: float) -> void:
 
 	# Countdown spawn timer when waiting to instantiate the next crystal
 	if _is_waiting_to_spawn:
+		# Do not count down fuel drain time while player is actively invincible
+		if power.get("is_invincible"):
+			return
+
 		_spawn_timer -= delta
 		if _spawn_timer <= 0.0:
 			_is_waiting_to_spawn = false
@@ -78,6 +82,7 @@ func spawn_crystal() -> void:
 	var crystal = crystal_scene.instantiate() as Node3D
 	get_parent().add_child(crystal)
 	_active_crystal = crystal
+	_active_crystal.tree_exited.connect(_on_crystal_tree_exited)
 
 	# Pass spawner reference to collectible for pickup callback management
 	if crystal.has_method("set_spawner"):
@@ -96,9 +101,19 @@ func spawn_crystal() -> void:
 	var spawn_pos: Vector3 = target_body.global_position
 	spawn_pos += -target_body.global_transform.basis.z * spawn_distance
 	spawn_pos.x = x_offset
-	spawn_pos.y = randf_range(1.5, 2.5)
+	spawn_pos.y = 1.8 # Uniform height ensuring slide & jump pickup consistency
 
 	crystal.global_position = spawn_pos
+	
+	# Terminal Debug Log
+	print("[ITEM SPAWN] Power Crystal spawned at position: ", crystal.global_position, " (Lane: ", random_lane + 1, ")")
+
+
+func _on_crystal_tree_exited() -> void:
+	if _active_crystal == null: # Already cleared by pickup or miss
+		return
+	_active_crystal = null
+	_calculate_and_start_spawn_timer()
 
 
 ## Callback triggered when player collects the active crystal.
@@ -113,6 +128,8 @@ func on_crystal_collected() -> void:
 
 ## Callback triggered when active crystal passes behind player uncollected.
 func on_crystal_missed() -> void:
+	if is_instance_valid(_active_crystal):
+		print("[ITEM MISSED] Power Crystal missed at position: ", _active_crystal.global_position)
 	_clear_active_crystal()
 	_calculate_and_start_spawn_timer()
 
@@ -127,12 +144,12 @@ func _clear_active_crystal() -> void:
 ## Calculates spawn timer delay factoring in random drain bounds, invincibility, and reaction time.
 func _calculate_and_start_spawn_timer() -> void:
 	var target_drain_time: float = randf_range(min_drain_time, max_drain_time)
-	var active_invincibility: float = 0.0
-	if power and power.get("is_invincible"):
-		active_invincibility = power.get("invincibility_timer")
-
-	var reaction_time: float = power.get_reaction_time() if power and power.has_method("get_reaction_time") else 3.0
-
-	# Timer formula: active_invincibility + target_drain_time - reaction_time
-	_spawn_timer = maxf(0.05, active_invincibility + target_drain_time - reaction_time)
+	
+	# Safe null-check prevents crash if power reference is missing
+	var reaction_time: float = 3.0
+	if power and power.has_method("get_reaction_time"):
+		reaction_time = power.get_reaction_time()
+	
+	# Only subtract reaction_time; active invincibility holds the timer in _process()
+	_spawn_timer = maxf(0.05, target_drain_time - reaction_time)
 	_is_waiting_to_spawn = true

@@ -16,6 +16,8 @@ func _on_body_entered(body: Node3D) -> void:
 func pick_up_effect() -> void:
 	super() # Triggers parent 'collectible' visual/sound effects
 	
+	print("[ITEM PICKUP] Collected Power Crystal at position: ", global_position)
+	
 	# Notify spawner to trigger power refill, invincibility, and schedule next spawn
 	if spawner and spawner.has_method("on_crystal_collected"):
 		spawner.on_crystal_collected()

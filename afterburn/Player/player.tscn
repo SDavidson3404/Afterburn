@@ -3,8 +3,25 @@
 [ext_resource type="Script" uid="uid://bpvo8cgevcra4" path="res://Player/player.gd" id="1_l8h54"]
 [ext_resource type="PackedScene" uid="uid://cxjb600ea3tbt" path="res://Player/Model + anims.tscn" id="2_4ntmi"]
 [ext_resource type="Script" uid="uid://dixc45l43q38y" path="res://Player/debu_gui.gd" id="3_btcbx"]
+[ext_resource type="PackedScene" uid="uid://dd3d4brupla2b" path="res://Models/Skateboard.blend" id="3_gwnis"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r8tgl"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_her67"]
+albedo_color = Color(1, 0, 0, 1)
+emission_enabled = true
+emission = Color(1, 0, 0, 1)
+emission_energy_multiplier = 9.09
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_fnnny"]
+use_rotation_3d = true
+rotation_3d_min = Vector3(0, 0, 0)
+rotation_3d_max = Vector3(0, 0, 0)
+gravity = Vector3(0, 0, 60)
+
+[sub_resource type="QuadMesh" id="QuadMesh_r8tgl"]
+size = Vector2(0.25, 0.25)
+orientation = 1
 
 [sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
 
@@ -124,8 +141,22 @@ shape = SubResource("CapsuleShape3D_r8tgl")
 [node name="Main Character Placeholder" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
 transform = Transform3D(-4.371139e-09, 0, 0.1, 0, 0.1, 0, -0.1, 0, -4.371139e-09, 0, 0, 0)
 
+[node name="Skateboard" parent="Body" unique_id=401567063 instance=ExtResource("3_gwnis")]
+transform = Transform3D(-6.5567085e-09, 0, 0.15, 0, 0.15, 0, -0.15, 0, -6.5567085e-09, 0, -0.88, 0.046)
+
 [node name="Camera3D" type="Camera3D" parent="Body" unique_id=1996423927]
 transform = Transform3D(1, 0, 0, 0, 0.8660254, 0.50000006, 0, -0.50000006, 0.8660254, 0, 6, 5)
+
+[node name="FireParticles" type="Node3D" parent="Body" unique_id=760566035]
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="Body/FireParticles" unique_id=1959678881]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.74, 1.241)
+material_override = SubResource("StandardMaterial3D_her67")
+amount = 1
+lifetime = 0.34
+explosiveness = 0.4
+process_material = SubResource("ParticleProcessMaterial_fnnny")
+draw_pass_1 = SubResource("QuadMesh_r8tgl")
 
 [node name="UI" type="Node2D" parent="Body" unique_id=48081940]
 
@@ -149,41 +180,41 @@ metadata/_edit_use_anchors_ = true
 
 [node name="Power Meter" type="ProgressBar" parent="Body/UI" unique_id=267632114]
 offset_left = 391.0
-offset_top = 59.0
+offset_top = 575.0
 offset_right = 712.0
-offset_bottom = 86.0
+offset_bottom = 602.0
 show_percentage = false
 
 [node name="Row_Squares" type="Node2D" parent="Body/UI" unique_id=893208432]
 
 [node name="Row1" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1916899024]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(448, 32)
-scale = Vector2(40.5, 41.5)
+position = Vector2(448, 625)
+scale = Vector2(48, 4)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row2" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1579182820]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(501, 32)
-scale = Vector2(40.5, 41.5)
+position = Vector2(501, 625)
+scale = Vector2(48, 4)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row3" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=210266865]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(551.99994, 32)
-scale = Vector2(40.5, 41.5)
+position = Vector2(551.99994, 625)
+scale = Vector2(48, 4)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row4" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=833332831]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(604, 32)
-scale = Vector2(40.5, 41.5)
+position = Vector2(604, 625)
+scale = Vector2(48, 4)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Row5" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1275927668]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(655, 32)
-scale = Vector2(40.5, 41.5)
+position = Vector2(655, 625)
+scale = Vector2(48, 4)
 mesh = SubResource("BoxMesh_jp6wc")
 
 [node name="Invincible indicator" type="MeshInstance2D" parent="Body/UI" unique_id=42956622]
