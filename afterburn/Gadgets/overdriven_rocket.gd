@@ -7,12 +7,10 @@ func _init() -> void:
 	gadget_name = "Overdriven Rocket"
 	gadget_id = "overdriven_rocket"
 
-
 ## Applies loadout passive trait: Enables Overdrive Surge mechanics in the power manager when suit fuel reaches zero.
 func apply_loadout_nerf(power_manager: Node) -> void:
 	if power_manager:
 		power_manager.set("has_overdriven_rocket", true)
-
 
 ## Activates overcharged rocket state, suspending passive fuel drain for a timed window.
 func activate_ability(_player: Node3D, power_manager: Node, _is_from_loadout: bool = false, _hits: int = 3) -> void:
