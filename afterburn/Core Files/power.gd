@@ -35,9 +35,6 @@ signal game_over_triggered
 ## Temporary invincibility duration granted when collecting crystals during speed catch-up.
 @export var crystal_invincibility_duration: float = 3.0
 
-## Suit power cost subtracted when executing a slide dodge maneuver.
-@export var slide_cost: int = 10
-
 ## Suit power cost subtracted when executing a dash speed boost.
 @export var dash_cost: int = 25
 
@@ -58,12 +55,13 @@ var coasting_deceleration_multiplier: float = 1.0
 var gadget_cooldown_progress: float = 0.0
 var is_gadget_ready: bool = true
 
-# Overdriven Rocket state flags (overdrive_rocket_max_duration represents 40 fuel units = 8s flight at base drain)
+## Overdriven Rocket state flags (overdrive_rocket_max_duration represents 50 fuel units)
 var has_overdriven_rocket: bool = false
 var is_overdrive_surge: bool = false
 var is_overcharged: bool = false
 var overdrive_rocket_timer: float = 0.0
-var overdrive_rocket_max_duration: float = 40.0
+var overdrive_rocket_max_duration: float = 50.0
+var overdrive_rocket_timers: Array[float] = []
 
 # Armor interception registry and runtime state trackers
 var active_armor_layers: Array = []
@@ -86,6 +84,8 @@ func start_run() -> void:
 	# Reset suit modifiers and overdrive states to baseline defaults
 	is_overcharged = false
 	overdrive_rocket_timer = 0.0
+	overdrive_rocket_timers.clear()
+	speed_acceleration = 0.25
 	max_power = 100.0
 	crystal_power_yield = 1.0
 	passive_drain_multiplier = 1.0
@@ -116,8 +116,6 @@ func start_run() -> void:
 	
 	# Bind player action signals to power drain callbacks
 	if player:
-		if not player.sliding.is_connected(slide):
-			player.sliding.connect(slide)
 		if not player.dashing.is_connected(dash):
 			player.dashing.connect(dash)
 
@@ -164,11 +162,23 @@ func _process(delta: float) -> void:
 	
 	else:
 		if is_overcharged:
-			# Rocket Overcharge state bypasses standard suit fuel drain
+			# Drain the active rocket timer at the front of the queue
 			var active_drain: float = power_drain_rate * passive_drain_multiplier
-			overdrive_rocket_timer = maxf(0.0, overdrive_rocket_timer - (active_drain * delta))
-			if overdrive_rocket_timer <= 0.0:
+			if not overdrive_rocket_timers.is_empty():
+				overdrive_rocket_timers[0] = maxf(0.0, overdrive_rocket_timers[0] - (active_drain * delta))
+				overdrive_rocket_timer = overdrive_rocket_timers[0]
+				
+				# Pop depleted rocket stack and advance to the next queued stack
+				if overdrive_rocket_timers[0] <= 0.0:
+					overdrive_rocket_timers.pop_front()
+					if overdrive_rocket_timers.is_empty():
+						is_overcharged = false
+						overdrive_rocket_timer = 0.0
+					else:
+						overdrive_rocket_timer = overdrive_rocket_timers[0]
+			else:
 				is_overcharged = false
+				overdrive_rocket_timer = 0.0
 		else:
 			if not was_invincible_this_frame:
 				var active_drain: float = power_drain_rate * passive_drain_multiplier
@@ -194,21 +204,23 @@ func _process(delta: float) -> void:
 				_set_invincible(false)
 
 
-## Triggers power refill, restores coasting/surge states, and processes gadget cooldown reduction.
+## Triggers power refill and processes gadget cooldown reduction.
 func collect_crystal() -> void:
 	if not is_run_active:
 		return
-	
+
 	current_power = clampf(current_power + (100.0 * crystal_power_yield), 0.0, max_power)
-	
-	if is_overcharged and overdrive_rocket_timer > 0.0:
-		overdrive_rocket_timer = clampf(overdrive_rocket_timer + (overdrive_rocket_max_duration * crystal_power_yield), 0.0, overdrive_rocket_max_duration)
-	
+
+	# Refill active draining rocket timer
+	if is_overcharged and not overdrive_rocket_timers.is_empty():
+		overdrive_rocket_timers[0] = clampf(overdrive_rocket_timers[0] + (overdrive_rocket_max_duration * crystal_power_yield), 0.0, overdrive_rocket_max_duration)
+		overdrive_rocket_timer = overdrive_rocket_timers[0]
+
 	if is_overdrive_surge:
 		is_overdrive_surge = false
 		current_speed = target_speed
 	is_coasting = false
-	
+
 	# Grant catch-up invincibility if collecting a crystal while running below target speed
 	var speed_ratio: float = current_speed / target_speed if target_speed > 0.0 else 1.0
 	if current_speed < target_speed:
@@ -220,10 +232,10 @@ func collect_crystal() -> void:
 	else:
 		_set_invincible(false)
 		speed_recovery_timer = 0.0
-		
+
 	power_changed.emit(current_power, max_power)
-	
-	# Reduce equipped gadget cooldown if player is running at target speed without an active ability running
+
+	# Reduce cooldown on crystal collection only when the selected gadget is not active
 	if selected_gadget and not is_gadget_ready and is_at_target_speed():
 		if _is_selected_gadget_active():
 			return
@@ -241,7 +253,8 @@ func _is_selected_gadget_active() -> bool:
 	
 	match selected_gadget.gadget_id:
 		"overdriven_rocket":
-			return is_overcharged
+			# Returns false to allow re-activation while active and enable immediate cooldown charging
+			return false
 		"power_armor":
 			return active_armor_layers.size() > 0
 		"hoverboard":
@@ -262,10 +275,14 @@ func _set_invincible(enabled: bool, duration: float = 0.0) -> void:
 ## Handles zero-power fuel exhaustion, triggering either Overdrive Surge or standard coasting.
 func _handle_zero_power() -> void:
 	if has_overdriven_rocket:
+		if not is_overdrive_surge:
+			print("[POWER EXHAUSTED] Suit fuel depleted! Initiating OVERDRIVE SURGE!")
 		is_overdrive_surge = true
 		if player and player.current_speed > current_speed:
 			current_speed = player.current_speed
 	else:
+		if not is_coasting:
+			print("[POWER EXHAUSTED] Suit fuel depleted! Starting COASTING deceleration...")
 		is_coasting = true
 
 
@@ -280,21 +297,65 @@ func reduce_gadget_cooldown(amount: float) -> void:
 
 ## Polymorphically triggers equipped gadget active power if ready and sets initial cooldown state.
 func try_use_loadout_gadget() -> void:
-	if not selected_gadget or not is_run_active or not is_gadget_ready or not player:
+	if not selected_gadget or not is_run_active or not player:
 		return
 
-	selected_gadget.activate_ability(player, self)
-		
+	# Prevent activation if armor or pickup instance of the same gadget is currently active
+	if _is_selected_gadget_active():
+		print("[GADGET BLOCKED] Cannot activate selected gadget while an instance of ", selected_gadget.gadget_name, " is active.")
+		return
+
+	# Special partial-activation logic for Power Armor
+	if selected_gadget.gadget_id == "power_armor":
+		var recharges: int = 6 if is_gadget_ready else clampi(int(round((1.0 - gadget_cooldown_progress) * 6.0)), 0, 6)
+		if recharges < 2:
+			print("[GADGET BLOCKED] Power Armor requires at least 2/6 recharge to activate (Current: ", recharges, "/6).")
+			return
+
+		@warning_ignore("integer_division")
+		var hits_to_grant: int = recharges / 2
+		var recharges_consumed: int = hits_to_grant * 2
+		var remaining_recharges: int = recharges - recharges_consumed
+
+		print("[GADGET ACTIVATED] Power Armor activated with ", recharges, "/6 recharge! Hits granted: ", hits_to_grant, " | Subtracted: ", recharges_consumed, " | Remaining: ", remaining_recharges, "/6")
+		selected_gadget.activate_ability(player, self, true, hits_to_grant)
+
+		gadget_cooldown_progress = 1.0 - (float(remaining_recharges) / 6.0)
+		is_gadget_ready = (remaining_recharges == 6)
+		gadget_cooldown_changed.emit(gadget_cooldown_progress, is_gadget_ready)
+		return
+
+	# Standard gadget activation (requires full cooldown readiness)
+	if not is_gadget_ready:
+		return
+
+	# Prevent activation if Overdriven Rocket stack is full (3)
+	if selected_gadget.gadget_id == "overdriven_rocket" and overdrive_rocket_timers.size() >= 3:
+		print("[GADGET BLOCKED] Cannot activate Overdriven Rocket: Stack is at maximum capacity (3).")
+		return
+
+	var gadget_display_name: String = selected_gadget.gadget_name if "gadget_name" in selected_gadget else "Gadget"
+	print("[GADGET ACTIVATED] Activated selected loadout gadget: ", gadget_display_name)
+
+	selected_gadget.activate_ability(player, self, true)
+
 	is_gadget_ready = false
-	if selected_gadget.gadget_id != "power_armor":
-		gadget_cooldown_progress = 1.0
-		gadget_cooldown_changed.emit(1.0, false)
+	gadget_cooldown_progress = 1.0
+	gadget_cooldown_changed.emit(1.0, false)
 
 
-## Engages overcharged rocket suit state for maximum active duration.
+## Engages overcharged rocket suit state and appends a new rocket stack to the queue.
 func activate_overdrive_rocket() -> void:
 	is_overcharged = true
-	overdrive_rocket_timer = overdrive_rocket_max_duration
+	if overdrive_rocket_timers.size() >= 3:
+		if not overdrive_rocket_timers.is_empty():
+			overdrive_rocket_timers[0] = overdrive_rocket_max_duration
+			overdrive_rocket_timer = overdrive_rocket_timers[0]
+			print("[OVERDRIVE ROCKET] Stack full (3)! Refilled power of active draining rocket.")
+	else:
+		overdrive_rocket_timers.append(overdrive_rocket_max_duration)
+		overdrive_rocket_timer = overdrive_rocket_timers[0]
+
 	if is_overdrive_surge or is_coasting:
 		is_overdrive_surge = false
 		is_coasting = false
@@ -325,43 +386,61 @@ func register_armor_layer(armor_node: Node) -> void:
 	active_armor_layers.append(armor_node)
 
 
-## Unregisters broken Power Armor shield layer and puts armor gadget back on cooldown.
+## Unregisters broken Power Armor shield layer.
 func unregister_armor_layer(armor_node: Node) -> void:
 	active_armor_layers.erase(armor_node)
-	if selected_gadget and selected_gadget.gadget_id == "power_armor":
-		is_gadget_ready = false
-		gadget_cooldown_progress = 1.0
-		gadget_cooldown_changed.emit(1.0, false)
 
 
-## Intercepts collision damage through active armor, overdrive rocket, or suit power meter.
+## Intercepts collision damage through active armor, overdrive rocket stacks, or suit power meter.
 func obstacle_hit(damage: float = 25.0) -> void:
 	if not is_run_active or is_invincible:
 		return
 
 	# Intercept hit if Power Armor shield layer is active
 	if active_armor_layers.size() > 0:
-		active_armor_layers[0].absorb_hit()
+		var armor = active_armor_layers[0]
+		var broke: bool = armor.absorb_hit()
+		if broke:
+			print("[OBSTACLE HIT] Power Armor absorbed hit and BROKE!")
+		else:
+			print("[OBSTACLE HIT] Power Armor absorbed hit! Hits remaining: ", armor.hits_remaining)
 		return
 		
 	# Zero-power coasting/surge states result in immediate game over on hit
 	if is_coasting or is_overdrive_surge:
+		print("[OBSTACLE HIT] Collided with obstacle while coasting/overdriven! Immediate crash.")
 		end_run()
 		return
 	
 	var total_damage: float = damage * obstacle_damage_multiplier
 
-	# Deduct damage from overcharged rocket duration before affecting main power meter
-	if is_overcharged:
-		if overdrive_rocket_timer > total_damage:
-			overdrive_rocket_timer -= total_damage
+	# Deduct damage from overcharged rocket stacks before affecting suit power
+	if is_overcharged and not overdrive_rocket_timers.is_empty():
+		var remaining_damage: float = total_damage
+		while remaining_damage > 0.0 and not overdrive_rocket_timers.is_empty():
+			if overdrive_rocket_timers[0] > remaining_damage:
+				overdrive_rocket_timers[0] -= remaining_damage
+				remaining_damage = 0.0
+			else:
+				remaining_damage -= overdrive_rocket_timers[0]
+				overdrive_rocket_timers.pop_front()
+		
+		if overdrive_rocket_timers.is_empty():
+			is_overcharged = false
+			overdrive_rocket_timer = 0.0
+			print("[OBSTACLE HIT] Rocket Overcharge shield depleted by obstacle hit!")
+		else:
+			overdrive_rocket_timer = overdrive_rocket_timers[0]
+			print("[OBSTACLE HIT] Rocket Overcharge absorbed hit! Remaining fuel timer: ", "%.1f" % overdrive_rocket_timer, "s")
+		
+		if remaining_damage <= 0.0:
 			return
 		else:
-			total_damage -= overdrive_rocket_timer
-			overdrive_rocket_timer = 0.0
-			is_overcharged = false
+			total_damage = remaining_damage
 
 	current_power = maxf(0.0, current_power - total_damage)
+	print("[OBSTACLE HIT] Hit obstacle! Damage taken: ", "%.1f" % total_damage, " | Remaining Power: ", "%.1f" % current_power)
+	
 	power_changed.emit(current_power, max_power)
 	if current_power <= 0.0:
 		_handle_zero_power()
@@ -369,7 +448,7 @@ func obstacle_hit(damage: float = 25.0) -> void:
 
 ## Terminates active run, saves statistics to SQLite database, and fires game over signal.
 func end_run() -> void:
-	if get_node_or_null("/root/DatabaseManager"):
+	if get_node_or_null("/root/Core Files/DatabaseManager"):
 		DatabaseManager.save_run()
 		
 	is_run_active = false
@@ -380,15 +459,10 @@ func end_run() -> void:
 	game_over_triggered.emit()
 
 
-## Power drain callback invoked when player slides.
-func slide():
-	current_power = clampf(current_power - slide_cost, 0.0, max_power)
-	power_changed.emit(current_power, max_power)
-
-
 ## Power drain callback invoked when player dashes.
 func dash():
 	current_power = clampf(current_power - dash_cost, 0.0, max_power)
+	print("[PLAYER DASH] Dash executed! Remaining Power: ", "%.1f" % current_power)
 	power_changed.emit(current_power, max_power)
 	if current_power <= 0.0 and not is_overcharged:
 		_handle_zero_power()

@@ -8,21 +8,21 @@ func _init() -> void:
 	gadget_id = "magnet"
 
 
-## Applies loadout handicap: Increases passive suit power drain by 20%.
+## Applies loadout handicap: Increases passive suit power drain by 15%.
 func apply_loadout_nerf(power_manager: Node) -> void:
-	power_manager.passive_drain_multiplier = 1.20
+	power_manager.passive_drain_multiplier = 1.15
 
 
 ## Activates magnet field or refreshes active duration if already running.
-func activate_ability(player: Node3D, _power_manager: Node) -> void:
+func activate_ability(player: Node3D, _power_manager: Node, _is_from_loadout: bool = false, _hits: int = 3) -> void:
 	var existing = player.get_node_or_null("MagnetInstance") as MagnetInstance
 	if existing:
 		existing.duration = existing.max_duration
 		return
 
 	var magnet_instance = MagnetInstance.new()
-	magnet_instance.duration = 15.0
-	magnet_instance.max_duration = 15.0
+	magnet_instance.duration = 20.0
+	magnet_instance.max_duration = 20.0
 	magnet_instance.player = player
 	magnet_instance.name = "MagnetInstance"
 	player.add_child(magnet_instance)
@@ -31,10 +31,10 @@ func activate_ability(player: Node3D, _power_manager: Node) -> void:
 ## Inner component node attached to the player that pulls track collectibles dynamically.
 class MagnetInstance extends Node:
 	## Active duration remaining in seconds.
-	var duration: float = 15.0
+	var duration: float = 20.0
 	
 	## Max duration cap used for timer refreshes.
-	var max_duration: float = 15.0
+	var max_duration: float = 20.0
 	
 	## Reference to the target player node.
 	var player: Node3D = null

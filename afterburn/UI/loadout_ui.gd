@@ -1,18 +1,23 @@
-## Loadout menu interface script.
-## Handles pre-run gadget selection, dynamic UI population, memory cleanup, and seamless mouse input state transitions.
+## Main Menu and Loadout interface script.
+## Handles main menu navigation (Start, Stats, Exit), gadget selection, lifetime stat displays, and mouse state transitions.
+class_name LoadoutUI
 extends Control
+
+## Static variable preserving the last selected gadget index across respawns
+static var last_selected_gadget_index: int = 0
 
 @export_category("Node References")
 ## Reference to the main power manager node responsible for tracking run state.
 @export var power_node: Node
 
-## Onready reference to the gadget dropdown selector menu.
+# Panel Containers
+@onready var gadget_panel: PanelContainer = %GadgetPanel
+
+# Gadget Selection Controls
 @onready var gadget_option: OptionButton = %GadgetOption
+@onready var confirm_start_button: Button = %ConfirmStartButton
 
-## Onready reference to the run start confirmation button.
-@onready var start_button: Button = %StartButton
-
-## Registry array of dictionaries mapping display names to GadgetBase string IDs.
+## Registry mapping display names to GadgetBase string IDs.
 const GADGET_OPTIONS: Array[Dictionary] = [
 	{"name": "None (Standard Run)", "id": ""},
 	{"name": "Pulse Wave", "id": "pulse_wave"},
@@ -24,49 +29,50 @@ const GADGET_OPTIONS: Array[Dictionary] = [
 
 
 func _ready() -> void:
-	# Enable visible mouse cursor for menu interaction
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if has_node("CanvasLayer"):
 		$CanvasLayer.show()
 	show()
 
-	# Configure element dimensions and disable keyboard focus traps
-	gadget_option.custom_minimum_size = Vector2(250, 40)
-	start_button.custom_minimum_size = Vector2(250, 40)
-	start_button.focus_mode = Control.FOCUS_NONE
-	gadget_option.focus_mode = Control.FOCUS_NONE
+	# Remove focus traps on UI elements
+	if gadget_option:
+		gadget_option.focus_mode = Control.FOCUS_NONE
 
-	# Populate OptionButton menu items dynamically from registry dictionary
+	# Populate gadget options
 	gadget_option.clear()
 	for i in range(GADGET_OPTIONS.size()):
 		gadget_option.add_item(GADGET_OPTIONS[i]["name"], i)
 
-	start_button.pressed.connect(_on_start_button_pressed)
+	# Restore previous selection index if available
+	if last_selected_gadget_index >= 0 and last_selected_gadget_index < GADGET_OPTIONS.size():
+		gadget_option.selected = last_selected_gadget_index
 
+	gadget_panel.show()
 
-## Confirms loadout selection, instantiates gadget via factory, and begins the run.
-func _on_start_button_pressed() -> void:
-	start_button.release_focus()
+func _on_exit_menu_button_pressed() -> void:
+	get_tree().quit()
+
+func _on_confirm_start_button_pressed() -> void:
 	if not power_node:
 		return
 
-	# Clean up previous gadget instance to prevent memory leaks across consecutive runs
+	# Free old gadget instance to prevent memory leaks
 	if power_node.selected_gadget:
 		power_node.selected_gadget.queue_free()
 		power_node.selected_gadget = null
 
-	# Lookup selected gadget ID from OptionButton dropdown state
-	var selected_idx: int = gadget_option.get_selected_id()
-	var gadget_id: String = GADGET_OPTIONS[selected_idx]["id"]
-	
-	# Instantiate gadget using the GadgetBase factory method if selected
-	if not gadget_id.is_empty():
-		var gadget_instance: GadgetBase = GadgetBase.create_by_id(gadget_id)
-		if gadget_instance:
-			power_node.add_child(gadget_instance)
-			power_node.selected_gadget = gadget_instance
+	var selected_idx: int = gadget_option.selected
+	last_selected_gadget_index = selected_idx
 
-	# Capture mouse cursor for gameplay controls, hide UI overlay, and start run
+	if selected_idx >= 0 and selected_idx < GADGET_OPTIONS.size():
+		var gadget_id: String = GADGET_OPTIONS[selected_idx]["id"]
+		if not gadget_id.is_empty():
+			var gadget_instance: GadgetBase = GadgetBase.create_by_id(gadget_id)
+			if gadget_instance:
+				power_node.add_child(gadget_instance)
+				power_node.selected_gadget = gadget_instance
+
+	# Capture mouse and start run
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if has_node("CanvasLayer"):
 		$CanvasLayer.hide()

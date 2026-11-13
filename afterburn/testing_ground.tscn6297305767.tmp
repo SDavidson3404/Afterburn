@@ -1,0 +1,112 @@
+[gd_scene format=3 uid="uid://csud42wqpny2d"]
+
+[ext_resource type="Script" uid="uid://bptf2xmr8avlg" path="res://ProceduralGenerator.gd" id="1_nxusl"]
+[ext_resource type="PackedScene" uid="uid://bohcd45ewcaui" path="res://Player/player.tscn" id="1_q4otm"]
+[ext_resource type="Script" uid="uid://db18b5x41fbqr" path="res://game_over_screen.gd" id="3_mja7a"]
+[ext_resource type="PackedScene" uid="uid://bfyf2n3db7drf" path="res://Streets/street_template.tscn" id="3_nxusl"]
+[ext_resource type="Script" uid="uid://8cvimaq8qkvh" path="res://countdown.gd" id="4_4n245"]
+[ext_resource type="Script" uid="uid://b1l2tf67oemvh" path="res://power.gd" id="4_nxusl"]
+[ext_resource type="Script" uid="uid://c0ehb4w56qf5v" path="res://crystal_spawn.gd" id="5_ytm02"]
+[ext_resource type="PackedScene" uid="uid://bwrujnxvsre36" path="res://Collectibles/crystal.tscn" id="6_1phy5"]
+[ext_resource type="PackedScene" uid="uid://dq8tr83phbqvk" path="res://UI/loadout_ui.tscn" id="7_alr7o"]
+[ext_resource type="PackedScene" uid="uid://cx1kihp4k4g7r" path="res://Gadgets/gadget_pickup.tscn" id="7_frp2q"]
+[ext_resource type="Script" uid="uid://q8wuo3kblhml" path="res://Gadgets/gadget_spawn.gd" id="8_ycv7h"]
+[ext_resource type="PackedScene" uid="uid://b8x32m5pause1" path="res://UI/pause_menu.tscn" id="12_delyl"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
+size = Vector3(21, 15, 1)
+
+[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("player")]
+script = ExtResource("1_nxusl")
+player = NodePath("Player")
+
+[node name="Player" parent="." unique_id=196411886 node_paths=PackedStringArray("power_node", "Wall_Detection") instance=ExtResource("1_q4otm")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5893574, -4)
+power_node = NodePath("../Power")
+Wall_Detection = NodePath("..")
+
+[node name="Timer" type="Timer" parent="Player" unique_id=1447148010]
+wait_time = 0.8
+
+[node name="GameOverScreen" type="CanvasLayer" parent="Player/Timer" unique_id=407047502]
+layer = 3
+script = ExtResource("3_mja7a")
+
+[node name="Control" type="Control" parent="Player/Timer/GameOverScreen" unique_id=2062426230]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Game Over" type="Label" parent="Player/Timer/GameOverScreen/Control" unique_id=1527370461]
+layout_mode = 0
+offset_left = 407.0
+offset_top = 177.0
+offset_right = 711.0
+offset_bottom = 254.0
+theme_override_font_sizes/font_size = 56
+text = "Game Over"
+
+[node name="Button" type="Button" parent="Player/Timer/GameOverScreen/Control" unique_id=2024271363]
+layout_mode = 0
+offset_left = 365.0
+offset_top = 302.0
+offset_right = 745.0
+offset_bottom = 393.0
+theme_override_font_sizes/font_size = 56
+text = "RESPAWN"
+
+[node name="Countdown" type="Label" parent="Player/Timer/GameOverScreen/Control/Button" unique_id=875755536]
+layout_mode = 0
+offset_left = 75.0
+offset_top = 123.0
+offset_right = 373.0
+offset_bottom = 195.0
+theme_override_font_sizes/font_size = 27
+text = "Respawning in X"
+script = ExtResource("4_4n245")
+
+[node name="Roads" type="Node3D" parent="." unique_id=564614269]
+
+[node name="StreetTemplate" parent="Roads" unique_id=82585562 instance=ExtResource("3_nxusl")]
+starting_street_node = true
+
+[node name="In_Road" type="Node3D" parent="." unique_id=1196056530]
+
+[node name="Power" type="Node" parent="." unique_id=638170115 node_paths=PackedStringArray("player")]
+script = ExtResource("4_nxusl")
+player = NodePath("../Player")
+
+[node name="Row_Detector" type="Area3D" parent="." unique_id=587142436]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Row_Detector" unique_id=1184232590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+shape = SubResource("BoxShape3D_jp6wc")
+
+[node name="CrystalSpawner" type="Node3D" parent="." unique_id=1351622964 node_paths=PackedStringArray("player", "power")]
+script = ExtResource("5_ytm02")
+crystal_scene = ExtResource("6_1phy5")
+player = NodePath("../Player")
+power = NodePath("../Power")
+
+[node name="Obstacles" type="Node3D" parent="." unique_id=1141337569]
+
+[node name="LoadoutUI" parent="." unique_id=1704217928 node_paths=PackedStringArray("power_node") instance=ExtResource("7_alr7o")]
+power_node = NodePath("../Power")
+
+[node name="GadgetSpawner" type="Node3D" parent="." unique_id=1430979975 node_paths=PackedStringArray("player")]
+script = ExtResource("8_ycv7h")
+gadget_pickup_scene = ExtResource("7_frp2q")
+player = NodePath("../Player")
+min_travel_time = null
+max_travel_time = null
+total_lanes = null
+lane_width = null
+
+[node name="PauseMenu" parent="." unique_id=150674282 node_paths=PackedStringArray("power_node", "loadout_ui") instance=ExtResource("12_delyl")]
+power_node = NodePath("../Power")
+loadout_ui = NodePath("../LoadoutUI")
+
+[connection signal="timeout" from="Player/Timer" to="Player" method="_on_timer_timeout"]
+[connection signal="pressed" from="Player/Timer/GameOverScreen/Control/Button" to="Player" method="_on_button_pressed"]
+[connection signal="body_entered" from="Row_Detector" to="." method="_on_row_detector_body_entered"]

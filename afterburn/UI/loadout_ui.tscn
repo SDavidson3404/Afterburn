@@ -7,30 +7,50 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -1.0
-offset_bottom = -1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_8j8cs")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=432742767]
 
-[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer" unique_id=893051179]
-offset_left = -1.0
-offset_top = 1.0
-offset_right = 249.0
-offset_bottom = 151.0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/PanelContainer" unique_id=1576458055]
-custom_minimum_size = Vector2(250, 150)
-layout_mode = 2
-
-[node name="GadgetOption" type="OptionButton" parent="CanvasLayer/PanelContainer/VBoxContainer" unique_id=433270164]
+[node name="GadgetPanel" type="PanelContainer" parent="CanvasLayer" unique_id=893051179]
 unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -110.0
+offset_right = 160.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/GadgetPanel" unique_id=1576458055]
+custom_minimum_size = Vector2(300, 200)
 layout_mode = 2
 
-[node name="StartButton" type="Button" parent="CanvasLayer/PanelContainer/VBoxContainer" unique_id=724190010]
-unique_name_in_owner = true
+[node name="TitleLabel" type="Label" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=1102938475]
 layout_mode = 2
-text = "START RUN
-"
+theme_override_font_sizes/font_size = 20
+text = "SELECT GADGET"
+horizontal_alignment = 1
+
+[node name="GadgetOption" type="OptionButton" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=433270164]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+
+[node name="ConfirmStartButton" type="Button" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=724190010]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "START RUN"
+
+[node name="Exit" type="Button" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=1299388117]
+layout_mode = 2
+text = "EXIT"
+
+[connection signal="pressed" from="CanvasLayer/GadgetPanel/VBoxContainer/ConfirmStartButton" to="." method="_on_confirm_start_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/GadgetPanel/VBoxContainer/Exit" to="." method="_on_exit_menu_button_pressed"]

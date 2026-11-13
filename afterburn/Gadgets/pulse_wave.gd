@@ -4,7 +4,7 @@ extends GadgetBase
 
 @export_category("Ability Properties")
 ## Probability (0.0 to 1.0) of spawning a gadget pickup when an obstacle is cleared.
-@export var gadget_drop_chance: float = 0.10
+@export var gadget_drop_chance: float = 0.12
 
 
 func _init() -> void:
@@ -18,7 +18,7 @@ func apply_loadout_nerf(power_manager: Node) -> void:
 
 
 ## Activates shockwave: Destroys oncoming obstacles and rolls for a bonus gadget drop per obstacle.
-func activate_ability(player: Node3D, power_manager: Node) -> void:
+func activate_ability(player: Node3D, power_manager: Node, _is_from_loadout: bool = false, _hits: int = 3) -> void:
 	var obstacles = player.get_tree().get_nodes_in_group("Obstacles")
 	var player_pos: Vector3 = player.body.global_position
 
@@ -44,6 +44,12 @@ func _spawn_gadget_pickup_at(pos: Vector3, scene: Node) -> void:
 	if pickup_scene:
 		var pickup = pickup_scene.instantiate() as Node3D
 		scene.add_child(pickup)
-		# Lock Y-position to 1.0 unit so pickups float uniformly above the track floor
-		pickup.global_position = Vector3(pos.x, 1.0, pos.z)
-		print("Pulse Wave: GADGET DROPPED at position ", pickup.global_position)
+		# Uniform Y-position ensuring slide & jump pickup consistency
+		pickup.global_position = Vector3(pos.x, 1.8, pos.z)
+
+		var gadget_name_str: String = "Gadget"
+		if "gadget_type" in pickup:
+			gadget_name_str = pickup.TYPE_TO_ID.get(pickup.gadget_type, "gadget").replace("_", " ").capitalize()
+
+		# Terminal Debug Log
+		print("[PULSE WAVE DROP] ", gadget_name_str, " dropped at position: ", pickup.global_position)

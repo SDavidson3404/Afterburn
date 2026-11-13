@@ -11,19 +11,22 @@ var meters_traveled: float = 0.0
 var travel_score: int = 0
 
 # Dodge scoring constants and runtime trackers
-const POINTS_PER_DODGE: int = 10
+const BASE_DODGE_POINTS: int = 100
 var dodge_score: int = 0
 
 # Crystal scoring constants and runtime trackers
-const CRYSTAL_POINTS: int = 100
+const CRYSTAL_POINTS: int = 500
 var crystal_score: int = 0
+
+# Gadget scoring constants and runtime trackers
+const GADGET_POINTS: int = 1000
+var gadget_score: int = 0
 
 # Stat tracking counters logged during each run
 var power_crystals: int = 0
 var gadgets: int = 0
 var jump_obstacle: int = 0
 var slide_obstacle: int = 0
-var dash_obstacle: int = 0
 var robot_crash: int = 0
 var scaffolding_crash: int = 0
 var drone_crash: int = 0
@@ -47,12 +50,12 @@ func create_stats_table() -> void:
 		travel_score INTEGER,
 		dodge_score INTEGER,
 		crystal_score INTEGER,
+		gadget_score INTEGER,
 		total_score INTEGER,
 		power_crystals INTEGER,
 		gadgets INTEGER,
 		jump_obstacle INTEGER,
 		slide_obstacle INTEGER,
-		dash_obstacle INTEGER,
 		robot_crash INTEGER,
 		scaffolding_crash INTEGER,
 		drone_crash INTEGER
@@ -68,15 +71,13 @@ func add_distance(meters_moved: float) -> void:
 	travel_score = int(total_distance_meters * POINTS_PER_METER)
 
 
-## Logs successful obstacle dodges by maneuver type and increments dodge score.
-func add_dodge(dodge_type: String = "") -> void:
-	dodge_score += POINTS_PER_DODGE
+## Logs successful obstacle dodges by maneuver type and increments dodge score by awarded points.
+func add_dodge(dodge_type: String = "", points: int = 100) -> void:
+	dodge_score += points
 	if dodge_type == "jump":
 		jump_obstacle += 1
 	elif dodge_type == "slide":
 		slide_obstacle += 1
-	elif dodge_type == "dash":
-		dash_obstacle += 1
 
 
 ## Logs collected power crystals and updates crystal score total.
@@ -85,14 +86,15 @@ func add_crystal() -> void:
 	power_crystals += 1
 
 
-## Increments total gadget pickup count.
+## Increments total gadget pickup count and updates gadget score total.
 func add_gadget() -> void:
+	gadget_score += GADGET_POINTS
 	gadgets += 1
 
 
-## Returns total combined score across movement distance, dodges, and crystals.
+## Returns total combined score across movement distance, dodges, crystals, and gadgets.
 func display_score() -> int:
-	return (travel_score + dodge_score + crystal_score)
+	return (travel_score + dodge_score + crystal_score + gadget_score)
 
 
 ## Logs obstacle collisions categorized by obstacle type.
@@ -112,18 +114,34 @@ func save_run() -> Dictionary:
 		"travel_score": travel_score,
 		"dodge_score": dodge_score,
 		"crystal_score": crystal_score,
+		"gadget_score": gadget_score,
 		"total_score": display_score(),
 		"power_crystals": power_crystals,
 		"gadgets": gadgets,
 		"jump_obstacle": jump_obstacle,
 		"slide_obstacle": slide_obstacle,
-		"dash_obstacle": dash_obstacle,
 		"robot_crash": robot_crash,
 		"scaffolding_crash": scaffolding_crash,
 		"drone_crash": drone_crash
 	}
 	db.insert_row("stats", run_data)
 	return run_data
+
+
+## Formats an integer value with commas as thousand separators.
+func format_number(value: int) -> String:
+	var s: String = str(value)
+	var negative: bool = s.begins_with("-")
+	if negative:
+		s = s.substr(1)
+	var result: String = ""
+	var digit_count: int = 0
+	for i in range(s.length() - 1, -1, -1):
+		if digit_count > 0 and digit_count % 3 == 0:
+			result = "," + result
+		result = s[i] + result
+		digit_count += 1
+	return ("-" if negative else "") + result
 
 
 ## Zeroes active run statistics counters in preparation for a new run.
@@ -133,11 +151,11 @@ func reset_run_stats() -> void:
 	travel_score = 0
 	dodge_score = 0
 	crystal_score = 0
+	gadget_score = 0
 	power_crystals = 0
 	gadgets = 0
 	jump_obstacle = 0
 	slide_obstacle = 0
-	dash_obstacle = 0
 	robot_crash = 0
 	scaffolding_crash = 0
 	drone_crash = 0
@@ -149,13 +167,14 @@ func lifetime_stats() -> Dictionary:
 	SELECT
 		COUNT(*) AS total_runs,
 		COALESCE(MAX(total_score), 0) AS high_score,
+		COALESCE(SUM(total_score), 0) AS total_lifetime_score,
 		COALESCE(MAX(total_distance), 0) AS max_distance,
 		COALESCE(MAX(power_crystals), 0) AS max_crystals,
-		COALESCE(MAX(jump_obstacle + slide_obstacle + dash_obstacle), 0) AS max_dodges,
+		COALESCE(MAX(jump_obstacle + slide_obstacle), 0) AS max_dodges,
 		COALESCE(SUM(total_distance), 0) AS total_distance,
 		COALESCE(SUM(power_crystals), 0) AS total_crystals,
 		COALESCE(SUM(gadgets), 0) AS total_gadgets,
-		COALESCE(SUM(jump_obstacle + slide_obstacle + dash_obstacle), 0) AS total_dodges,
+		COALESCE(SUM(jump_obstacle + slide_obstacle), 0) AS total_dodges,
 		COALESCE(SUM(robot_crash), 0) AS robot_crashes,
 		COALESCE(SUM(scaffolding_crash), 0) AS scaffolding_crashes,
 		COALESCE(SUM(drone_crash), 0) AS drone_crashes

@@ -11,8 +11,8 @@ config_version=5
 [application]
 
 config/name="Afterburn"
-config/version="0.1.0"
-run/main_scene="uid://csud42wqpny2d"
+config/version="0.2.0"
+run/main_scene="uid://lipxi2n8t1a2"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 

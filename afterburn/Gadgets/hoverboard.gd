@@ -4,7 +4,7 @@ extends GadgetBase
 
 @export_category("Ability Properties")
 ## Total active duration of the hoverboard buff in seconds.
-@export var duration: float = 20.0
+@export var duration: float = 30.0
 
 
 func _init() -> void:
@@ -18,7 +18,7 @@ func apply_loadout_nerf(power_manager: Node) -> void:
 
 
 ## Triggers hoverboard active state or refreshes duration if already active.
-func activate_ability(player: Node3D, power_manager: Node) -> void:
+func activate_ability(player: Node3D, power_manager: Node, _is_from_loadout: bool = false, _hits: int = 3) -> void:
 	# Refresh duration if an instance is currently active on the player
 	var existing = player.get_node_or_null("HoverboardInstance") as HoverboardInstance
 	if existing:
@@ -37,8 +37,8 @@ func activate_ability(player: Node3D, power_manager: Node) -> void:
 
 ## Inner component node attached to the player to manage temporary hoverboard state and stat modifiers.
 class HoverboardInstance extends Node:
-	var duration: float = 20.0
-	var max_duration: float = 20.0
+	var duration: float = 30.0
+	var max_duration: float = 30.0
 	var player: Node3D = null
 	var power_manager: Node = null
 
@@ -47,7 +47,7 @@ class HoverboardInstance extends Node:
 		# Apply active mobility buffs upon entering the scene tree
 		if player:
 			player.jump_velocity_multiplier = 2.0
-			player.dash_drain_multiplier = 0.40
+			player.dash_decel_multiplier = 0.40
 		
 		if power_manager:
 			power_manager.coasting_deceleration_multiplier = 0.40
@@ -59,11 +59,18 @@ class HoverboardInstance extends Node:
 			_end_hoverboard()
 
 
+	## Deducts 10% of total duration (3.0s) whenever the player executes a jump.
+	func on_jump() -> void:
+		duration -= max_duration * 0.10
+		if duration <= 0.0:
+			_end_hoverboard()
+
+
 	## Restores default player and power manager stat multipliers before self-destructing.
 	func _end_hoverboard() -> void:
 		if player:
 			player.jump_velocity_multiplier = 1.0
-			player.dash_drain_multiplier = 1.0
+			player.dash_decel_multiplier = 1.0
 			
 		if power_manager:
 			power_manager.coasting_deceleration_multiplier = 1.0

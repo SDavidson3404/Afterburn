@@ -1,0 +1,195 @@
+[gd_scene format=3 uid="uid://lipxi2n8t1a2"]
+
+[ext_resource type="Script" uid="uid://dxvkd2xbrxjyi" path="res://Menus/main_menu.gd" id="1_jf8mj"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fnnny"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 10
+border_width_top = 5
+border_width_right = 10
+border_color = Color(0, 0.8, 0.8, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r8tgl"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 10
+border_width_top = 5
+border_width_right = 10
+border_color = Color(0.7054149, 0.85660034, 0.5897561, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_her67"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 10
+border_width_top = 5
+border_width_right = 10
+border_color = Color(0.77613527, 0.25021, 0.45329297, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[node name="Main Menu" type="Node2D" unique_id=751866201]
+script = ExtResource("1_jf8mj")
+
+[node name="Menu" type="CanvasLayer" parent="." unique_id=1958796577]
+
+[node name="PanelContainer" type="PanelContainer" parent="Menu" unique_id=1204682936]
+offset_left = 13.0
+offset_top = 318.0
+offset_right = 722.0
+offset_bottom = 626.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu/PanelContainer" unique_id=362749381]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Menu/PanelContainer/VBoxContainer" unique_id=415394380]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 45
+text = "Afterburn"
+
+[node name="Start Game" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=858523421]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Start Game"
+
+[node name="Settings" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=889810540]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Settings"
+
+[node name="Stats" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=66596106]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Stats"
+
+[node name="Leaderboard" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=79835135]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Leaderboard"
+
+[node name="Quit" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=1729521862]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Quit"
+
+[node name="Stats" type="CanvasLayer" parent="." unique_id=964057081]
+
+[node name="StatsPanel" type="PanelContainer" parent="Stats" unique_id=1909766522]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 224.0
+offset_top = -298.0
+offset_right = 544.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Stats/StatsPanel" unique_id=33116099]
+custom_minimum_size = Vector2(300, 260)
+layout_mode = 2
+
+[node name="StatsHeader" type="Label" parent="Stats/StatsPanel/VBoxContainer" unique_id=412071195]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "LIFETIME STATS"
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="Stats/StatsPanel/VBoxContainer" unique_id=1877877390]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Loading stats..."
+
+[node name="Leaderboard" type="CanvasLayer" parent="." unique_id=1369351048]
+
+[node name="LeaderboardPanel" type="PanelContainer" parent="Leaderboard" unique_id=77991920]
+visible = false
+offset_left = 736.0
+offset_top = 320.0
+offset_right = 1135.0
+offset_bottom = 636.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Leaderboard/LeaderboardPanel" unique_id=1751606909]
+layout_mode = 2
+
+[node name="Scores" type="Label" parent="Leaderboard/LeaderboardPanel/VBoxContainer" unique_id=1221668311]
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "1st Place:
+2nd Place:
+3rd Place:
+4th Place:
+5th Place:
+6th Place:
+7th Place:
+8th Place:
+9th Place:
+10th Place:"
+
+[node name="Settings" type="CanvasLayer" parent="." unique_id=1544946233]
+
+[node name="SettingPanel" type="PanelContainer" parent="Settings" unique_id=1978109876]
+visible = false
+offset_left = 9.0
+offset_top = 11.0
+offset_right = 368.0
+offset_bottom = 305.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Settings/SettingPanel" unique_id=1737697485]
+layout_mode = 2
+
+[node name="ResLabel" type="Label" parent="Settings/SettingPanel/VBoxContainer" unique_id=47652153]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Resolution: X"
+
+[node name="ResMenu" type="OptionButton" parent="Settings/SettingPanel/VBoxContainer" unique_id=424055266]
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+selected = 0
+item_count = 3
+popup/item_0/text = "1280 x 720"
+popup/item_0/id = 0
+popup/item_1/text = "1920 x 1080"
+popup/item_1/id = 1
+popup/item_2/text = "2560 x 1440"
+popup/item_2/id = 2
+
+[node name="Label" type="Label" parent="Settings/SettingPanel/VBoxContainer" unique_id=1852594053]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "X: X"
+
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Start Game" to="." method="_on_start_game_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Settings" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Stats" to="." method="_on_stats_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Leaderboard" to="." method="_on_leaderboard_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Quit" to="." method="_on_quit_pressed"]

@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://cqh4amp168i0o"]
+
+[ext_resource type="Script" uid="uid://db18b5x41fbqr" path="res://UI/game_over_screen.gd" id="1_script"]
+
+[node name="GameOverScreen" type="CanvasLayer" unique_id=236089230]
+script = ExtResource("1_script")
+
+[node name="Control" type="Control" parent="." unique_id=487260527]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="Control" unique_id=318819591]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="GameOverLabel" type="Label" parent="Control" unique_id=1550346863]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -180.0
+offset_right = 150.0
+offset_bottom = -120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 42
+text = "GAME OVER"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control" unique_id=105114413]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -90.0
+offset_right = 140.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="StatsLabel" type="Label" parent="Control/VBoxContainer" unique_id=2016762130]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "FINAL SCORE: 0
+Distance: 0m
+Crystals Collected: 0
+Obstacles Dodged: 0
+Gadgets Picked Up: 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RespawnButton" type="Button" parent="Control/VBoxContainer" unique_id=1746343056]
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "RESPAWN"
+
+[node name="MenuButton" type="Button" parent="Control/VBoxContainer" unique_id=48169774]
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "MAIN MENU"

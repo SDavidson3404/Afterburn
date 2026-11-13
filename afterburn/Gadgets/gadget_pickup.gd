@@ -43,7 +43,7 @@ func _resolve_gadget_type_and_color() -> void:
 	_apply_gadget_color()
 
 
-## Programmatically overrides the mesh material to color-code the pickup in 3D space.
+## Programmatically overrides mesh material and light node color to color-code the pickup in 3D space.
 func _apply_gadget_color() -> void:
 	var mesh_node := get_node_or_null("MeshInstance3D") as MeshInstance3D
 	if not mesh_node:
@@ -65,6 +65,11 @@ func _apply_gadget_color() -> void:
 
 	mesh_node.material_override = material
 
+	# Sync OmniLight3D light color with active gadget type
+	var light_node := get_node_or_null("OmniLight3D") as OmniLight3D
+	if light_node:
+		light_node.light_color = gadget_color
+
 
 ## Handles player intersection, triggering ability effects and freeing the pickup node.
 func _on_body_entered(body: Node3D) -> void:
@@ -75,7 +80,19 @@ func _on_body_entered(body: Node3D) -> void:
 	var player_node: Node3D = body if body is Player else body.get_parent() as Node3D
 	if player_node and player_node.is_in_group("Player"):
 		_is_collected = true
+		
+		var gadget_name_str: String = TYPE_TO_ID.get(gadget_type, "gadget").replace("_", " ").capitalize()
+		
+		# If tagged by spawner, forward to gadget_spawn to print elapsed time and reset timer
+		var spawner = get_meta("spawner") if has_meta("spawner") else null
+		if is_instance_valid(spawner) and spawner.has_method("on_gadget_collected"):
+			spawner.on_gadget_collected(self, gadget_name_str)
+		else:
+			print("[ITEM PICKUP] Collected ", gadget_name_str, " Pickup at position: ", global_position)
+		
 		_trigger_pickup_effect(player_node)
+		if get_node_or_null("/root/Core Files/DatabaseManager"):
+			DatabaseManager.add_gadget()
 		queue_free()
 
 

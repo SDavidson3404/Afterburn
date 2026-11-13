@@ -3,9 +3,6 @@ extends Node
 
 
 func _ready() -> void:
-	# Optional query clearing existing database records during test runs:
-	# DatabaseManager.db.query("DELETE FROM stats;")
-	
 	print("====================================")
 	print("--- FULL DATABASE MANAGER TEST ---")
 	print("====================================\n")
@@ -18,17 +15,16 @@ func _ready() -> void:
 	# 2. Simulate Run 1 (Validates scoring tracking callbacks)
 	print("--- 2. SIMULATING RUN #1 ---")
 	DatabaseManager.add_distance(3200.0)         # 3200 meters = 3200 travel points
-	DatabaseManager.add_dodge("jump")            # 1 jump dodge (+10 pts)
-	DatabaseManager.add_dodge("slide")           # 1 slide dodge (+10 pts)
-	DatabaseManager.add_dodge("dash")            # 1 dash dodge (+10 pts)
-	DatabaseManager.add_crystal()                # 1 crystal (+100 pts)
-	DatabaseManager.add_crystal()                # 2 crystals (+100 pts)
-	DatabaseManager.add_gadget()                 # 1 gadget pickup
+	DatabaseManager.add_dodge("jump", 100)       # 1 jump dodge (+100 pts)
+	DatabaseManager.add_dodge("slide", 100)      # 1 slide dodge (+100 pts)
+	DatabaseManager.add_crystal()                # 1 crystal (+500 pts)
+	DatabaseManager.add_crystal()                # 2 crystals (+500 pts)
+	DatabaseManager.add_gadget()                 # 1 gadget pickup (+1000 pts)
 	DatabaseManager.player_crash("robot")        # 1 robot collision
 	DatabaseManager.player_crash("scaffolding")  # 1 scaffolding collision
 	DatabaseManager.player_crash("drone")        # 1 drone collision
 	
-	print("Current Calculated Score (Expected 3430): ", DatabaseManager.display_score())
+	print("Current Calculated Score (Expected 5400): ", DatabaseManager.display_score())
 	
 	# 3. Persist Run 1 row to SQLite database
 	var run1_data: Dictionary = DatabaseManager.save_run()
@@ -47,13 +43,13 @@ func _ready() -> void:
 	# 6. Simulate Run 2 (Validates multi-run aggregation, MAX, and SUM logic)
 	print("--- 4. SIMULATING RUN #2 ---")
 	DatabaseManager.add_distance(6400.0)   # 6400 meters = 6400 travel points
-	DatabaseManager.add_dodge("jump")      # 1 dodge (+10 pts)
-	DatabaseManager.add_crystal()          # 1 crystal (+100 pts)
-	DatabaseManager.add_gadget()           # 1 gadget
-	DatabaseManager.add_gadget()           # 2 gadgets
+	DatabaseManager.add_dodge("jump", 100) # 1 dodge (+100 pts)
+	DatabaseManager.add_crystal()          # 1 crystal (+500 pts)
+	DatabaseManager.add_gadget()           # 1 gadget (+1000 pts)
+	DatabaseManager.add_gadget()           # 2 gadgets (+1000 pts)
 	DatabaseManager.player_crash("robot")  # 1 robot collision
 	
-	print("Run 2 Calculated Score (Expected 6510): ", DatabaseManager.display_score())
+	print("Run 2 Calculated Score (Expected 9000): ", DatabaseManager.display_score())
 	var run2_data: Dictionary = DatabaseManager.save_run()
 	print("Data Saved for Run 2: ", run2_data)
 	DatabaseManager.reset_run_stats()
@@ -78,7 +74,7 @@ func run_power_tests() -> void:
 	print("====================================\n")
 	
 	# Instantiate power manager node into scene tree
-	var power: Node = preload("res://power.gd").new()
+	var power: Node = preload("res://Core Files/power.gd").new()
 	add_child(power)
 	
 	# Single-element arrays allow pass-by-reference mutation inside lambda callbacks
@@ -193,7 +189,7 @@ func run_crystal_spawn_tests() -> void:
 	test_root.add_child(player_node)
 	player_node.global_position = Vector3.ZERO
 	
-	var power_node: Node = preload("res://power.gd").new()
+	var power_node: Node = preload("res://Core Files/power.gd").new()
 	test_root.add_child(power_node)
 	
 	# Construct dynamic dummy PackedScene resource for crystal instantiation
@@ -203,7 +199,7 @@ func run_crystal_spawn_tests() -> void:
 	dummy_crystal.free()
 	
 	# Instantiate crystal spawner
-	var spawner_script = preload("res://crystal_spawn.gd")
+	var spawner_script = preload("res://Spawners/crystal_spawn.gd")
 	var spawner = Node3D.new()
 	spawner.set_script(spawner_script)
 	spawner.player = player_node
