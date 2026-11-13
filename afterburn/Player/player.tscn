@@ -141,10 +141,10 @@ script = ExtResource("1_l8h54")
 shape = SubResource("CapsuleShape3D_r8tgl")
 
 [node name="Main Character Placeholder" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
-transform = Transform3D(-4.371139e-09, 0, 0.1, 0, 0.1, 0, -0.1, 0, -4.371139e-09, 0, 0, 0)
+transform = Transform3D(-6.5567085e-09, 0, 0.15, 0, 0.15, 0, -0.15, 0, -6.5567085e-09, 0, 0.49828595, 0)
 
 [node name="Skateboard" parent="Body" unique_id=401567063 instance=ExtResource("3_gwnis")]
-transform = Transform3D(-6.5567085e-09, 0, 0.15, 0, 0.15, 0, -0.15, 0, -6.5567085e-09, 0, -0.88, 0.046)
+transform = Transform3D(-8.742278e-09, 0, 0.2, 0, 0.2, 0, -0.2, 0, -8.742278e-09, 0, -0.8363007, 0.046)
 
 [node name="Camera3D" type="Camera3D" parent="Body" unique_id=1996423927]
 transform = Transform3D(1, 0, 0, 0, 0.8660254, 0.50000006, 0, -0.50000006, 0.8660254, 0, 6, 5)

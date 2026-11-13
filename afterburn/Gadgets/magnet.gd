@@ -8,13 +8,13 @@ func _init() -> void:
 	gadget_id = "magnet"
 
 
-## Applies loadout handicap: Increases passive suit power drain by 20%.
+## Applies loadout handicap: Increases passive suit power drain by 15%.
 func apply_loadout_nerf(power_manager: Node) -> void:
-	power_manager.passive_drain_multiplier = 1.20
+	power_manager.passive_drain_multiplier = 1.15
 
 
 ## Activates magnet field or refreshes active duration if already running.
-func activate_ability(player: Node3D, _power_manager: Node) -> void:
+func activate_ability(player: Node3D, _power_manager: Node, _is_from_loadout: bool = false, _hits: int = 3) -> void:
 	var existing = player.get_node_or_null("MagnetInstance") as MagnetInstance
 	if existing:
 		existing.duration = existing.max_duration

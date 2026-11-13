@@ -18,7 +18,7 @@ func apply_loadout_nerf(power_manager: Node) -> void:
 
 
 ## Triggers hoverboard active state or refreshes duration if already active.
-func activate_ability(player: Node3D, power_manager: Node) -> void:
+func activate_ability(player: Node3D, power_manager: Node, _is_from_loadout: bool = false, _hits: int = 3) -> void:
 	# Refresh duration if an instance is currently active on the player
 	var existing = player.get_node_or_null("HoverboardInstance") as HoverboardInstance
 	if existing:

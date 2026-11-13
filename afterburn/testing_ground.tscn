@@ -15,8 +15,9 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_jp6wc"]
 size = Vector3(21, 15, 1)
 
-[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("player")]
+[node name="Testing Ground" type="Node3D" unique_id=1583271204 node_paths=PackedStringArray("crystal_spawner", "player")]
 script = ExtResource("1_nxusl")
+crystal_spawner = NodePath("CrystalSpawner")
 player = NodePath("Player")
 
 [node name="Player" parent="." unique_id=196411886 node_paths=PackedStringArray("power_node", "Wall_Detection", "game_over_screen") instance=ExtResource("1_q4otm")]

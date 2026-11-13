@@ -154,6 +154,18 @@ tracks/20/path = NodePath("Armature/Skeleton3D:Bone.009")
 tracks/20/interp = 1
 tracks/20/loop_wrap = true
 tracks/20/keys = PackedFloat32Array(0, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 0.23, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 0.43, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 0.62, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 0.82, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 1.04, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 1.24, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 1.47, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 1.6700001, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 1.88, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 2.08, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 2.28, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 2.48, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993, 2.67, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 2.8700001, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993)
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Armature/Skeleton3D/Cube:position")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
 
 [sub_resource type="Animation" id="Animation_vvdhi"]
 length = 0.001
@@ -304,6 +316,18 @@ tracks/20/path = NodePath("Armature/Skeleton3D:Bone.009")
 tracks/20/interp = 1
 tracks/20/loop_wrap = true
 tracks/20/keys = PackedFloat32Array(0, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.5909993)
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Armature/Skeleton3D/Cube:position")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
 
 [sub_resource type="Animation" id="Animation_pge6c"]
 resource_name = "Slide"
@@ -455,6 +479,18 @@ tracks/20/path = NodePath("Armature/Skeleton3D:Bone.009")
 tracks/20/interp = 1
 tracks/20/loop_wrap = true
 tracks/20/keys = PackedFloat32Array(0, 1, 0.0006992149, 0.00068989355, 0.80667156, 0.5909993, 0.17, 1, 0.00069921487, 0.0006898935, 0.8066715, 0.59099925, 1.5, 1, 0.000699215, 0.00068989355, 0.80667156, 0.5909993)
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Armature/Skeleton3D/Cube:position")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {
+"times": PackedFloat32Array(0, 0.07, 0.36),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, -1.485919, 0), Vector3(0, -2.8334718, 0)]
+}
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_aagt3"]
 _data = {
@@ -466,7 +502,7 @@ _data = {
 [node name="Main Character Placeholder" unique_id=1036910471 instance=ExtResource("1_27p27")]
 script = ExtResource("2_k2uew")
 
-[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(356763788) index="0" unique_id=44367100]
+[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(2096180001) index="0" unique_id=1994301665]
 bones/0/rotation = Quaternion(-1.2887437e-08, -4.2683645e-08, -0.25780466, 0.96619713)
 bones/0/scale = Vector3(1, 1, 0.9999999)
 bones/1/rotation = Quaternion(-6.528312e-09, 6.1060746e-08, -0.2414743, 0.9704073)
