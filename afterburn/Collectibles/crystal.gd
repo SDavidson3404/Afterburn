@@ -3,8 +3,6 @@ extends collectible
 var spawner: Node = null # The node that spawned it
 
 # Runs on startup
-func _ready() -> void: add_to_group("Collectibles") # Enables magnet tracking
-
 func _ready() -> void:
 	add_to_group("Collectibles") # Enables magnet tracking
 

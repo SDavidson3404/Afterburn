@@ -62,7 +62,6 @@ func _ensure_stats_label() -> void:
 func _on_respawn_pressed() -> void:
 	hide()
 	get_tree().paused = false
-	LoadoutUI.open_gadget_select_on_respawn = true
 	get_tree().reload_current_scene()
 
 
@@ -70,5 +69,4 @@ func _on_respawn_pressed() -> void:
 func _on_menu_pressed() -> void:
 	hide()
 	get_tree().paused = false
-	LoadoutUI.open_gadget_select_on_respawn = false
 	get_tree().reload_current_scene()
