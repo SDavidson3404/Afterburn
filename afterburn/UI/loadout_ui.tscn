@@ -48,9 +48,9 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "START RUN"
 
-[node name="Exit" type="Button" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=1299388117]
+[node name="MainMenu" type="Button" parent="CanvasLayer/GadgetPanel/VBoxContainer" unique_id=1299388117]
 layout_mode = 2
-text = "EXIT"
+text = "RETURN TO MENU"
 
 [connection signal="pressed" from="CanvasLayer/GadgetPanel/VBoxContainer/ConfirmStartButton" to="." method="_on_confirm_start_button_pressed"]
-[connection signal="pressed" from="CanvasLayer/GadgetPanel/VBoxContainer/Exit" to="." method="_on_exit_menu_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/GadgetPanel/VBoxContainer/MainMenu" to="." method="_on_exit_menu_button_pressed"]

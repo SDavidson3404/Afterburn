@@ -50,7 +50,7 @@ func _ready() -> void:
 	gadget_panel.show()
 
 func _on_exit_menu_button_pressed() -> void:
-	get_tree().quit()
+	get_tree().change_scene_to_file("res://Menus/main_menu.tscn")
 
 func _on_confirm_start_button_pressed() -> void:
 	if not power_node:

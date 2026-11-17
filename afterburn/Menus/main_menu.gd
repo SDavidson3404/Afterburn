@@ -4,6 +4,17 @@ extends Node2D
 @onready var stats_panel: PanelContainer = %StatsPanel
 @onready var leaderboard_panel: PanelContainer = $Leaderboard/LeaderboardPanel
 @onready var setting_panel: PanelContainer = $Settings/SettingPanel
+@onready var shop: CanvasLayer = $Shop
+@onready var gadget_menu: OptionButton = $Settings/SettingPanel/VBoxContainer/GadgetMenu
+
+func _ready() -> void:
+	for item in DatabaseManager.unlocked_gadgets:
+		_on_shop_bought(item)
+	for item in gadget_menu.item_count:
+		print(gadget_menu.item_count)
+		print(DatabaseManager.chosen_starting_gadget)
+		if gadget_menu.get_item_text(item) == DatabaseManager.chosen_starting_gadget:
+			gadget_menu.select(item)
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()
@@ -54,3 +65,25 @@ func _on_settings_pressed() -> void:
 		setting_panel.hide()
 	else:
 		setting_panel.show()
+
+func _on_shop_pressed() -> void:
+	if shop.visible:
+		shop.hide()
+	else:
+		shop.show()
+
+func _on_shop_bought(item: String) -> void:
+	match item:
+		"PULSE_WAVE":
+			gadget_menu.add_item("Pulse Wave", 1)
+		"MAGNET":
+			gadget_menu.add_item("Magnet", 2)
+		"POWER_ARMOR":
+			gadget_menu.add_item("Power Armor", 3)
+		"HOVERBOARD":
+			gadget_menu.add_item("Hoverboard", 4)
+		"OVERDRIVEN_ROCKET":
+			gadget_menu.add_item("Overdriven Rocket", 5)
+
+func _on_gadget_menu_item_selected(index: int) -> void:
+	DatabaseManager.chosen_starting_gadget = gadget_menu.get_item_text(index)
