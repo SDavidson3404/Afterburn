@@ -25,6 +25,8 @@ const JUMP_VELOCITY: float = 7.0 # The velocity of the jump
 const GRAVITY: float = 12.0 # The strength of gravity
 const STRAFE_SPEED: float = 15.0  # The speed of strafing
 const dash_multiplier: float = 2.0 # The multiplier to the speed when dashing
+const POWER_METER_NORMAL_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
+const POWER_METER_LOW_COLOR: Color = Color(1.0, 0.0, 0.0, 1.0)
 
 # Regular variables
 var current_speed: float = 15.0 # The speed of movement
@@ -51,6 +53,9 @@ func _ready() -> void:
 	
 	# Apply the power node's signals signals
 	connect_signals()
+	
+	if power_node:
+		_update_power_meter_color(power_node.current_power)
 	
 	# set the invincibility indicator
 	invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
@@ -133,6 +138,7 @@ func _physics_process(delta: float) -> void:
 	# Set the power meter to reflect the current power
 	if power_meter:
 		power_meter.value = min(power_node.current_power, 100.0)
+		_update_power_meter_color(power_node.current_power)
 	
 	# Update text to reflect current speed and score
 	speed_label.text = ("SPEED(MPS): " + "%.1f" % current_speed)
@@ -251,8 +257,22 @@ func update_row_square():
 ## Connects the necessary signals to their respective methods
 func connect_signals():
 	power_node.invincibility_changed.connect(_on_power_invincibility_changed)
+	power_node.power_changed.connect(_on_power_changed)
 	power_node.game_over_triggered.connect(lose)
 	Wall_Detection.Wall_Hit.connect(hit)
+
+## Updates the power meter color when suit power changes
+func _on_power_changed(current_power: float, _max_power: float) -> void:
+	_update_power_meter_color(current_power)
+
+## Sets the power meter to red below dash_cost (25) and reverts to normal at 25 or above
+func _update_power_meter_color(current_power: float) -> void:
+	if not power_meter or not power_node:
+		return
+	if current_power < power_node.dash_cost:
+		power_meter.modulate = POWER_METER_LOW_COLOR
+	else:
+		power_meter.modulate = POWER_METER_NORMAL_COLOR
 
 ## Changes the color of the Invincibility UI
 func _on_power_invincibility_changed(is_invincible: bool) -> void:
