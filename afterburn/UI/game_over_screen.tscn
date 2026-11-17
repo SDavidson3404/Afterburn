@@ -63,7 +63,9 @@ text = "FINAL SCORE: 0
 Distance: 0m
 Crystals Collected: 0
 Obstacles Dodged: 0
-Gadgets Picked Up: 0"
+Gadgets Picked Up: 0
+Coins Gained: 0
+Total Coins: 0"
 horizontal_alignment = 1
 vertical_alignment = 1
 

@@ -27,7 +27,7 @@ func _update_run_stats() -> void:
 	if not stats_label:
 		return
 
-	if get_node_or_null("/root/Core Files/DatabaseManager"):
+	if get_node_or_null("/root/DatabaseManager"):
 		var total_dodges: int = DatabaseManager.jump_obstacle + DatabaseManager.slide_obstacle
 		
 		stats_label.text = (
@@ -35,8 +35,8 @@ func _update_run_stats() -> void:
 			"Distance: %sm\n" % DatabaseManager.format_number(DatabaseManager.total_distance_meters) +
 			"Crystals Collected: %s\n" % DatabaseManager.format_number(DatabaseManager.power_crystals) +
 			"Obstacles Dodged: %s\n" % DatabaseManager.format_number(total_dodges) +
-			"Gadgets Picked Up: %s" % DatabaseManager.format_number(DatabaseManager.gadgets) +
-			"Coins Gained: %s " % DatabaseManager.format_number(DatabaseManager.add_coins()) +
+			"Gadgets Picked Up: %s\n" % DatabaseManager.format_number(DatabaseManager.gadgets) +
+			"Coins Gained: %s\n " % DatabaseManager.format_number(DatabaseManager.add_coins()) +
 			"Total Coins: %s " % DatabaseManager.format_number(DatabaseManager.coins)
 		)
 	else:

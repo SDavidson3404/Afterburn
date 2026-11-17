@@ -121,7 +121,7 @@ func on_crystal_collected() -> void:
 	_clear_active_crystal()
 	if power:
 		power.collect_crystal()
-	if get_node_or_null("/root/Core Files/DatabaseManager"):
+	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.add_crystal()
 	_calculate_and_start_spawn_timer()
 
