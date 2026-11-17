@@ -31,6 +31,11 @@ var robot_crash: int = 0
 var scaffolding_crash: int = 0
 var drone_crash: int = 0
 
+# Shop Related Things
+var coins: int = 1000
+var unlocked_gadgets: Array = []
+var chosen_starting_gadget: String = "None"
+
 
 ## Initializes SQLite database connection and creates required tables upon engine launch.
 func _ready() -> void:
@@ -185,3 +190,10 @@ func lifetime_stats() -> Dictionary:
 	if db.query_result.size() > 0:
 		return db.query_result[0]
 	return {}
+
+func add_coins() -> int:
+	@warning_ignore("integer_division")
+	DatabaseManager.coins += display_score() / 300
+	@warning_ignore("integer_division")
+	return DatabaseManager.coins + display_score() / 300
+	

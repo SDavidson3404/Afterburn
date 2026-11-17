@@ -165,14 +165,14 @@ func _on_confirm_yes_pressed() -> void:
 	# Call power manager end_run() to persist telemetry and terminate run state
 	if power_node and power_node.has_method("end_run"):
 		power_node.end_run()
-	elif get_node_or_null("/root/DatabaseManager"):
+	elif get_node_or_null("/root/Core Files/DatabaseManager"):
 		DatabaseManager.save_run()
 		DatabaseManager.reset_run_stats()
 
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 	# Reload scene to reset world position, procedural track generator, and display Main Menu
-	get_tree().reload_current_scene()
+	get_tree().change_scene_to_file("res://Menus/main_menu.tscn")
 
 
 ## Hides menu controls and starts the 1-second millisecond countdown.

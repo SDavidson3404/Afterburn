@@ -244,7 +244,7 @@ func register_dodge(dodge_type: String) -> void:
 		current_slide_dodge_count += 1
 		points = current_slide_dodge_count * 100
 
-	if points > 0 and get_node_or_null("/root/DatabaseManager"):
+	if points > 0 and get_node_or_null("/root/Core Files/DatabaseManager"):
 		DatabaseManager.add_dodge(dodge_type, points)
 
 ## Resets maneuver dodge multipliers if player hits an obstacle.

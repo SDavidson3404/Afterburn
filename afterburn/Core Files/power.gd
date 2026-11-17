@@ -94,14 +94,6 @@ func start_run() -> void:
 	has_overdriven_rocket = false
 	is_overdrive_surge = false
 	active_armor_layers.clear()
-	
-	# Apply loadout handicaps and initialize cooldown state if a gadget is equipped
-	if selected_gadget:
-		selected_gadget.apply_loadout_nerf(self)
-		gadget_cooldown_progress = 0.0
-		is_gadget_ready = true
-		gadget_cooldown_changed.emit(0.0, true)
-		
 	current_power = max_power
 	current_speed = base_speed
 	target_speed = base_speed
@@ -112,6 +104,14 @@ func start_run() -> void:
 	invincibility_timer = 0.0
 	speed_recovery_timer = 0.0
 	
+	# Apply loadout handicaps and initialize cooldown state if a gadget is equipped
+	if selected_gadget:
+		selected_gadget.apply_loadout_nerf(self)
+		gadget_cooldown_progress = 0.0
+		is_gadget_ready = true
+		gadget_cooldown_changed.emit(0.0, true)
+	
+	# Emit the power changed signal
 	power_changed.emit(current_power, max_power)
 	
 	# Bind player action signals to power drain callbacks
@@ -119,11 +119,14 @@ func start_run() -> void:
 		if not player.dashing.is_connected(dash):
 			player.dashing.connect(dash)
 
-
+# Runs when the next frame starts
 func _process(delta: float) -> void:
+	
+	# If run isn't active, don't do anything
 	if not is_run_active:
 		return
-		
+	
+	# Variable for if you are invincible this frame
 	var was_invincible_this_frame: bool = is_invincible
 	
 	# Process invincibility expiration and speed catch-up logic
@@ -135,7 +138,6 @@ func _process(delta: float) -> void:
 			invincibility_timer -= delta
 			if invincibility_timer <= 0.0:
 				_set_invincible(false)
-			
 	if speed_recovery_timer > 0.0:
 		speed_recovery_timer = maxf(0.0, speed_recovery_timer - delta)
 	
@@ -143,7 +145,8 @@ func _process(delta: float) -> void:
 	var meters_moved: float = current_speed * delta
 	distance_traveled += meters_moved
 	
-	if get_node_or_null("/root/DatabaseManager"):
+	# Update database manager
+	if get_node_or_null("/root/Core Files/DatabaseManager"):
 		DatabaseManager.add_distance(meters_moved)
 	
 	# Kinematic target speed scaling equation: target_speed = sqrt(v_0^2 + 2 * a * d)
@@ -448,7 +451,7 @@ func obstacle_hit(damage: float = 25.0) -> void:
 
 ## Terminates active run, saves statistics to SQLite database, and fires game over signal.
 func end_run() -> void:
-	if get_node_or_null("/root/DatabaseManager"):
+	if get_node_or_null("/root/Core Files/DatabaseManager"):
 		DatabaseManager.save_run()
 		
 	is_run_active = false
