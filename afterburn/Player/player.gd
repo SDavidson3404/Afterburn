@@ -14,6 +14,7 @@ signal dashing # A signal for when dashing
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
 @onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
 @onready var model: Node3D = get_node_or_null("Body/Main Character Placeholder")
+@onready var afterburner: GPUParticles3D = $Body/FireParticles/GPUParticles3D
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
 @export var game_over_screen: CanvasLayer
@@ -132,7 +133,20 @@ func update_target_row() -> void: current_row_offset = int(row_index) * 3
 func _physics_process(delta: float) -> void:
 	if not power_node or not power_node.is_run_active:
 		return
-
+	
+	var material: StandardMaterial3D = afterburner.material_override
+	if power_node.current_speed == power_node.target_speed:
+		material.emission = Color(1.0, 0.0, 0.0, 1.0)
+		material.albedo_color = Color(1.0, 0.0, 0.0, 1.0)
+	else:
+		material.emission = Color(0.0, 1.0, 1.0, 1.0)
+		material.albedo_color = Color(0.0, 1.0, 1.0, 1.0)
+	var afterburner_speed: float = remap(current_speed, 0.0, power_node.max_speed, .5, 5.0)
+	@warning_ignore("narrowing_conversion")
+	var afterburner_amount: int = remap(current_speed, 0.0, power_node.max_speed, 1, 60)
+	afterburner.speed_scale = afterburner_speed
+	afterburner.amount = afterburner_amount
+	
 	if model and model.has_method("play_anim") and not animation_player.is_playing():
 		model.play_anim("Idle")
 	# Set the power meter to reflect the current power

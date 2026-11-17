@@ -207,12 +207,10 @@ func _draw() -> void:
 func _draw_pie_wedge(center: Vector2, rad: float, ratio: float, color: Color) -> void:
 	if rad <= 0.0 or ratio <= 0.001:
 		return
-
 	# Drawing a 360-degree pie wedge with draw_polygon causes self-overlapping start/end vertices that break 2D triangulation. Use draw_circle for full circles.
 	if ratio >= 0.999:
 		draw_circle(center, rad, color)
 		return
-
 	var points: PackedVector2Array = [center]
 	var num_segments: int = max(4, int(ceil(32 * ratio)))
 	var start_angle: float = -PI / 2.0  # Start pointing straight up (-90 degrees)

@@ -46,10 +46,10 @@ func _spawn_gadget_pickup_at(pos: Vector3, scene: Node) -> void:
 		scene.add_child(pickup)
 		# Uniform Y-position ensuring slide & jump pickup consistency
 		pickup.global_position = Vector3(pos.x, 1.8, pos.z)
-		
+
 		var gadget_name_str: String = "Gadget"
 		if "gadget_type" in pickup:
 			gadget_name_str = pickup.TYPE_TO_ID.get(pickup.gadget_type, "gadget").replace("_", " ").capitalize()
-			
+
 		# Terminal Debug Log
 		print("[PULSE WAVE DROP] ", gadget_name_str, " dropped at position: ", pickup.global_position)
