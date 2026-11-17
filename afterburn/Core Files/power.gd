@@ -146,7 +146,7 @@ func _process(delta: float) -> void:
 	distance_traveled += meters_moved
 	
 	# Update database manager
-	if get_node_or_null("/root/Core Files/DatabaseManager"):
+	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.add_distance(meters_moved)
 	
 	# Kinematic target speed scaling equation: target_speed = sqrt(v_0^2 + 2 * a * d)
@@ -451,7 +451,7 @@ func obstacle_hit(damage: float = 25.0) -> void:
 
 ## Terminates active run, saves statistics to SQLite database, and fires game over signal.
 func end_run() -> void:
-	if get_node_or_null("/root/Core Files/DatabaseManager"):
+	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.save_run()
 		
 	is_run_active = false

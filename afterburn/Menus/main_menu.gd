@@ -11,8 +11,6 @@ func _ready() -> void:
 	for item in DatabaseManager.unlocked_gadgets:
 		_on_shop_bought(item)
 	for item in gadget_menu.item_count:
-		print(gadget_menu.item_count)
-		print(DatabaseManager.chosen_starting_gadget)
 		if gadget_menu.get_item_text(item) == DatabaseManager.chosen_starting_gadget:
 			gadget_menu.select(item)
 
@@ -30,7 +28,7 @@ func _update_lifetime_stats_display() -> void:
 	if not stats_label:
 		return
 
-	if get_node_or_null("/root/Core Files/DatabaseManager"):
+	if get_node_or_null("/root/DatabaseManager"):
 		var stats: Dictionary = DatabaseManager.lifetime_stats()
 		if stats.is_empty():
 			stats_label.text = "No lifetime stats found."

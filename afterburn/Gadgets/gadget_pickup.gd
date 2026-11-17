@@ -91,7 +91,7 @@ func _on_body_entered(body: Node3D) -> void:
 			print("[ITEM PICKUP] Collected ", gadget_name_str, " Pickup at position: ", global_position)
 		
 		_trigger_pickup_effect(player_node)
-		if get_node_or_null("/root/Core Files/DatabaseManager"):
+		if get_node_or_null("/root/DatabaseManager"):
 			DatabaseManager.add_gadget()
 		queue_free()
 

@@ -165,7 +165,7 @@ func _on_confirm_yes_pressed() -> void:
 	# Call power manager end_run() to persist telemetry and terminate run state
 	if power_node and power_node.has_method("end_run"):
 		power_node.end_run()
-	elif get_node_or_null("/root/Core Files/DatabaseManager"):
+	elif get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.save_run()
 		DatabaseManager.reset_run_stats()
 
