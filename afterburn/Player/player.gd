@@ -179,18 +179,18 @@ func _physics_process(delta: float) -> void:
 	else:
 		var target_vel_z: float = -power_node.current_speed
 		
-		# If coasting, let power.gd's coasting deceleration dictate player speed directly
-		if power_node and power_node.is_coasting:
-			dash_decel_rate = 0.0
-			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
-		elif body.velocity.z < target_vel_z:
-			# Calculate required deceleration rate to reach target speed in exactly 1.0 second
+		# Always finish dash deceleration (1.0s normal / 2.5s with Hoverboard) before coasting takes over
+		if body.velocity.z < target_vel_z:
 			if dash_decel_rate <= 0.0:
 				var excess_speed: float = abs(body.velocity.z - target_vel_z)
 				var decel_duration: float = 1.0 / maxf(dash_decel_multiplier, 0.01)
 				dash_decel_rate = excess_speed / maxf(decel_duration, 0.01)
 			
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, dash_decel_rate * delta)
+		elif power_node and power_node.is_coasting:
+			# Once dash speed returns to target speed, let power.gd's coasting deceleration dictate speed
+			dash_decel_rate = 0.0
+			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
 		else:
 			dash_decel_rate = 0.0
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)

@@ -158,8 +158,10 @@ func _process(delta: float) -> void:
 	
 	# State Machine Processing: Coasting vs Overdrive Surge vs Normal Operation
 	if is_coasting:
-		var active_coasting_rate: float = coasting_deceleration * coasting_deceleration_multiplier
-		current_speed = maxf(0.0, current_speed - (active_coasting_rate * delta))
+		# Wait until any active dash deceleration returns to current_speed before decaying coasting speed
+		if not player or player.current_speed <= current_speed + 0.1:
+			var active_coasting_rate: float = coasting_deceleration * coasting_deceleration_multiplier
+			current_speed = maxf(0.0, current_speed - (active_coasting_rate * delta))
 		if current_speed <= 0.0 and (not player or player.current_speed <= 0.0):
 			end_run()
 			
