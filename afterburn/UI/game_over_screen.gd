@@ -81,13 +81,19 @@ func _check_and_prompt_leaderboard() -> void:
 		if menu_button:
 			menu_button.hide()
 			
-		name_input.call_deferred("grab_focus")
+		call_deferred("_grab_name_input_focus")
 	else:
 		name_entry_box.hide()
 		if respawn_button:
 			respawn_button.show()
 		if menu_button:
 			menu_button.show()
+
+
+## Safely grabs focus on the LineEdit only if it is currently inside the active SceneTree.
+func _grab_name_input_focus() -> void:
+	if is_inside_tree() and visible and name_input and name_input.is_inside_tree() and name_input.visible:
+		name_input.grab_focus()
 
 
 ## Ensures a StatsLabel node exists inside VBoxContainer.

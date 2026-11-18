@@ -455,8 +455,11 @@ func obstacle_hit(damage: float = 25.0) -> void:
 		_handle_zero_power()
 
 
-## Terminates active run, saves statistics to SQLite database, and fires game over signal.
-func end_run() -> void:
+## Terminates active run, saves statistics to SQLite database, and optionally fires game over signal.
+func end_run(emit_game_over: bool = true) -> void:
+	if not is_run_active:
+		return
+
 	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.save_run()
 		
@@ -465,7 +468,8 @@ func end_run() -> void:
 	is_overdrive_surge = false
 	is_invincible = false
 	current_speed = 0.0
-	game_over_triggered.emit()
+	if emit_game_over:
+		game_over_triggered.emit()
 
 
 ## Power drain callback invoked when player dashes.

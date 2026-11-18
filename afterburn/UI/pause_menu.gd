@@ -162,9 +162,9 @@ func _on_confirm_yes_pressed() -> void:
 	get_tree().paused = false
 	hide_all()
 
-	# Call power manager end_run() to persist telemetry and terminate run state
+	# Save run telemetry without triggering the GameOverScreen UI while changing scenes
 	if power_node and power_node.has_method("end_run"):
-		power_node.end_run()
+		power_node.end_run(false)
 	elif get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.save_run()
 		DatabaseManager.reset_run_stats()
