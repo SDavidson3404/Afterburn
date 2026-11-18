@@ -19,7 +19,7 @@ static var last_selected_gadget_index: int = 0
 
 ## Registry mapping display names to GadgetBase string IDs.
 const GADGET_OPTIONS: Array[Dictionary] = [
-	{"name": "None (Standard Run)", "id": ""},
+	{"name": "None (Standard Run)", "id": "None"},
 	{"name": "Pulse Wave", "id": "pulse_wave"},
 	{"name": "Magnet", "id": "magnet"},
 	{"name": "Power Armor", "id": "power_armor"},
@@ -43,11 +43,11 @@ func _ready() -> void:
 	for i in range(GADGET_OPTIONS.size()):
 		gadget_option.add_item(GADGET_OPTIONS[i]["name"], i)
 
-	# Sync with gadget chosen in Main Menu Settings if set, otherwise restore last index
+	# Sync with gadget ID chosen in Main Menu Settings if set, otherwise restore last index
 	var matched_menu_gadget: bool = false
 	if get_node_or_null("/root/DatabaseManager") and DatabaseManager.chosen_starting_gadget != "None":
 		for i in range(GADGET_OPTIONS.size()):
-			if GADGET_OPTIONS[i]["name"] == DatabaseManager.chosen_starting_gadget or GADGET_OPTIONS[i]["id"] == DatabaseManager.chosen_starting_gadget:
+			if GADGET_OPTIONS[i]["id"] == DatabaseManager.chosen_starting_gadget:
 				gadget_option.selected = i
 				last_selected_gadget_index = i
 				matched_menu_gadget = true
@@ -75,7 +75,7 @@ func _on_confirm_start_button_pressed() -> void:
 
 	if selected_idx >= 0 and selected_idx < GADGET_OPTIONS.size():
 		var gadget_id: String = GADGET_OPTIONS[selected_idx]["id"]
-		if not gadget_id.is_empty():
+		if gadget_id != "None":
 			var gadget_instance: GadgetBase = GadgetBase.create_by_id(gadget_id)
 			if gadget_instance:
 				power_node.add_child(gadget_instance)

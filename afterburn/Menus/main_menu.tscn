@@ -183,9 +183,13 @@ offset_bottom = 636.0
 [node name="VBoxContainer" type="VBoxContainer" parent="Leaderboard/LeaderboardPanel" unique_id=1751606909]
 layout_mode = 2
 
-[node name="Scores" type="Label" parent="Leaderboard/LeaderboardPanel/VBoxContainer" unique_id=1221668311]
+[node name="Scores" type="RichTextLabel" parent="Leaderboard/LeaderboardPanel/VBoxContainer" unique_id=1221668311]
 layout_mode = 2
-theme_override_font_sizes/font_size = 21
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 21
+theme_override_font_sizes/bold_font_size = 21
+bbcode_enabled = true
 text = "1st Place:
 2nd Place:
 3rd Place:
@@ -196,6 +200,8 @@ text = "1st Place:
 8th Place:
 9th Place:
 10th Place:"
+fit_content = true
+scroll_active = false
 
 [node name="Settings" type="CanvasLayer" parent="." unique_id=1544946233]
 

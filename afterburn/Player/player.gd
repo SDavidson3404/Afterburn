@@ -303,12 +303,15 @@ var time_left: int = 3
 ## Runs on losing the game
 func lose() -> void: 
 	print("YOU LOST")
+	if not game_over_screen:
+		game_over_screen = get_node_or_null("../GameOverScreen")
+	if not game_over_screen:
+		var go_packed := load("res://UI/game_over_screen.tscn") as PackedScene
+		if go_packed:
+			game_over_screen = go_packed.instantiate() as CanvasLayer
+			get_tree().current_scene.add_child(game_over_screen)
 	if game_over_screen and game_over_screen.has_method("show_game_over"):
 		game_over_screen.show_game_over()
-	else:
-		var go_node = get_node_or_null("../GameOverScreen")
-		if go_node and go_node.has_method("show_game_over"):
-			go_node.show_game_over()
 
 ## Begins the sliding state
 func slide():

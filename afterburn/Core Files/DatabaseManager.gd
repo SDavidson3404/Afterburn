@@ -36,23 +36,13 @@ var coins: int = 1000
 var unlocked_gadgets: Array = []
 var chosen_starting_gadget: String = "None"
 
-## Maps gadget IDs and display names to their signature hex colors.
+## Maps gadget IDs to their signature hex colors.
 const GADGET_COLOR_HEX: Dictionary = {
 	"pulse_wave": "#f233d9",
-	"Pulse Wave": "#f233d9",
-	"PULSE_WAVE": "#f233d9",
 	"magnet": "#f24040",
-	"Magnet": "#f24040",
-	"MAGNET": "#f24040",
 	"power_armor": "#33f259",
-	"Power Armor": "#33f259",
-	"POWER_ARMOR": "#33f259",
 	"hoverboard": "#ffffff",
-	"Hoverboard": "#ffffff",
-	"HOVERBOARD": "#ffffff",
-	"overdriven_rocket": "#ff8c00",
-	"Overdriven Rocket": "#ff8c00",
-	"OVERDRIVEN_ROCKET": "#ff8c00"
+	"overdriven_rocket": "#ff8c00"
 }
 
 
@@ -120,7 +110,7 @@ func add_leaderboard_entry(player_name: String, score: int, gadget_used: String 
 		clean_name = "PLAYER"
 
 	var clean_gadget: String = gadget_used.strip_edges()
-	if clean_gadget.is_empty() or clean_gadget == "None (Standard Run)":
+	if clean_gadget.is_empty():
 		clean_gadget = "None"
 
 	db.insert_row("leaderboard", {
