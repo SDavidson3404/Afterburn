@@ -32,6 +32,7 @@ const DISPLAY_TO_ID: Dictionary = {
 
 
 func _ready() -> void:
+	res_label.text = ("Scale Factor: " + str(get_window().content_scale_factor) + "x")
 	for item in DatabaseManager.unlocked_gadgets:
 		_on_shop_bought(item)
 	for i in range(gadget_menu.item_count):
@@ -147,5 +148,8 @@ func _on_shop_bought(item: String) -> void:
 
 
 func _on_gadget_menu_item_selected(index: int) -> void:
-	var selected_text: String = gadget_menu.get_item_text(index)
-	DatabaseManager.chosen_starting_gadget = DISPLAY_TO_ID.get(selected_text, "None")
+	DatabaseManager.chosen_starting_gadget = gadget_menu.get_item_text(index)
+
+func _on_h_slider_value_changed(value: float) -> void:
+	res_label.text = ("Scale Factor: " + str(value) + "x")
+	get_window().content_scale_factor = value

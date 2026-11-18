@@ -32,7 +32,7 @@ var scaffolding_crash: int = 0
 var drone_crash: int = 0
 
 # Shop Related Things
-var coins: int = 1000
+var coins: int = 0
 var unlocked_gadgets: Array = []
 var chosen_starting_gadget: String = "None"
 
@@ -280,4 +280,5 @@ func add_coins() -> int:
 	@warning_ignore("integer_division")
 	DatabaseManager.coins += display_score() / 300
 	@warning_ignore("integer_division")
-	return DatabaseManager.coins + display_score() / 300
+	return display_score() / 300
+	
