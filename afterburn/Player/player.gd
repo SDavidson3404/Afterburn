@@ -68,6 +68,25 @@ func _ready() -> void:
 	
 	# Capture the mouse
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	var starting_gadget_id: String = "None"
+	match DatabaseManager.chosen_starting_gadget:
+		"Pulse Wave":
+			starting_gadget_id = "pulse_wave"
+		"Magnet":
+			starting_gadget_id = "magnet"
+		"Power Armor":
+			starting_gadget_id = "power_armor"
+		"Hoverboard":
+			starting_gadget_id = "hoverboard"
+		"Overdriven Rocket":
+			starting_gadget_id = "overdriven_rocket"
+	if not starting_gadget_id == "None":
+		var gadget_instance: GadgetBase = GadgetBase.create_by_id(starting_gadget_id)
+		if gadget_instance:
+				power_node.add_child(gadget_instance)
+				power_node.selected_gadget = gadget_instance
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	power_node.start_run()
 
 ## Runs on input of any kind
 func _input(event: InputEvent) -> void:
@@ -294,6 +313,7 @@ func lose() -> void:
 func slide():
 	if model and "animation_player" in model and model.animation_player:
 		model.animation_player.stop()
+		body.visible = true
 		
 	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()

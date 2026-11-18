@@ -5,9 +5,6 @@ extends CanvasLayer
 ## Reference to the main power manager node tracking run state.
 @export var power_node: Node
 
-## Reference to the main LoadoutUI control node.
-@export var loadout_ui: Control
-
 @onready var pause_panel: PanelContainer = $Control/PausePanel
 @onready var resume_button: Button = $Control/PausePanel/VBoxContainer/ResumeButton
 @onready var exit_button: Button = $Control/PausePanel/VBoxContainer/ExitButton

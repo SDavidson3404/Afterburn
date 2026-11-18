@@ -1,12 +1,10 @@
 [gd_scene format=3 uid="uid://bfyf2n3db7drf"]
 
 [ext_resource type="Script" uid="uid://dsscn46nl6yb6" path="res://Streets/street.gd" id="1_mlvgy"]
+[ext_resource type="PackedScene" uid="uid://dsw1cl4rhbwx0" path="res://Models/Road.blend" id="2_o78y8"]
 [ext_resource type="PackedScene" uid="uid://bd3uscgslrm1d" path="res://Models/Buildings.blend" id="2_tp3hc"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_i0fns"]
-size = Vector3(19, 1, 300)
-
-[sub_resource type="BoxMesh" id="BoxMesh_mlvgy"]
 size = Vector3(19, 1, 300)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_mlvgy"]
@@ -26,9 +24,8 @@ starting_street_node = null
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -150)
 shape = SubResource("BoxShape3D_i0fns")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1200330379]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -150)
-mesh = SubResource("BoxMesh_mlvgy")
+[node name="Road" parent="." unique_id=902744829 instance=ExtResource("2_o78y8")]
+transform = Transform3D(-2.1855694e-08, 0, 0.5, 0, 0.5, 0, -0.5, 0, -2.1855694e-08, 0, 0, -150)
 
 [node name="CollisionShape3D2" type="CollisionShape3D" parent="." unique_id=401170717]
 transform = Transform3D(1, 0, 0, 0, 0, -1.0000001, 0, 1.0000001, 0, 15.293396, 35, -22.5)

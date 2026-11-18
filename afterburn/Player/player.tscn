@@ -25,8 +25,6 @@ gravity = Vector3(0, 0, 60)
 size = Vector2(0.25, 0.25)
 orientation = 1
 
-[sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
-
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_jp6wc"]
 radius = 9.545
 height = 19.09
@@ -189,35 +187,40 @@ show_percentage = false
 
 [node name="Row_Squares" type="Node2D" parent="Body/UI" unique_id=893208432]
 
-[node name="Row1" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1916899024]
+[node name="Row1" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=545599885]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(448, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 424.0
+offset_top = 623.0
+offset_right = 472.0
+offset_bottom = 627.0
 
-[node name="Row2" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1579182820]
+[node name="Row2" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1345457691]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(501, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 477.0
+offset_top = 623.0
+offset_right = 525.0
+offset_bottom = 627.0
 
-[node name="Row3" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=210266865]
+[node name="Row3" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1075721872]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(551.99994, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 528.0
+offset_top = 623.0
+offset_right = 576.0
+offset_bottom = 627.0
 
-[node name="Row4" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=833332831]
+[node name="Row4" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1387042881]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(604, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 580.0
+offset_top = 623.0
+offset_right = 628.0
+offset_bottom = 627.0
 
-[node name="Row5" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1275927668]
+[node name="Row5" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1311922455]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(655, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 631.0
+offset_top = 623.0
+offset_right = 679.0
+offset_bottom = 627.0
 
 [node name="Invincible indicator" type="MeshInstance2D" parent="Body/UI" unique_id=42956622]
 position = Vector2(1059, 86)

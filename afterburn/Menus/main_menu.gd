@@ -52,7 +52,7 @@ func _update_lifetime_stats_display() -> void:
 		stats_label.text = "Database not connected."
 
 func _on_start_game_pressed() -> void:
-	get_tree().change_scene_to_file("res://Core Files/testing_ground.tscn")
+	get_tree().change_scene_to_file("res://Core Files/Level.tscn")
 
 func _on_leaderboard_pressed() -> void:
 	if leaderboard_panel.visible:

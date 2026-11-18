@@ -32,7 +32,7 @@ var scaffolding_crash: int = 0
 var drone_crash: int = 0
 
 # Shop Related Things
-var coins: int = 0
+var coins: int = 100
 var unlocked_gadgets: Array = []
 var chosen_starting_gadget: String = "None"
 
@@ -191,6 +191,7 @@ func lifetime_stats() -> Dictionary:
 		return db.query_result[0]
 	return {}
 
+## Adds coins to your current coin count
 func add_coins() -> int:
 	@warning_ignore("integer_division")
 	DatabaseManager.coins += display_score() / 300
