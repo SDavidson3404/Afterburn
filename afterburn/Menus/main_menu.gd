@@ -6,8 +6,10 @@ extends Node2D
 @onready var setting_panel: PanelContainer = $Settings/SettingPanel
 @onready var shop: CanvasLayer = $Shop
 @onready var gadget_menu: OptionButton = $Settings/SettingPanel/VBoxContainer/GadgetMenu
+@onready var res_label: Label = $Settings/SettingPanel/VBoxContainer/ResLabel
 
 func _ready() -> void:
+	res_label.text = ("Scale Factor: " + str(get_window().content_scale_factor) + "x")
 	for item in DatabaseManager.unlocked_gadgets:
 		_on_shop_bought(item)
 	for item in gadget_menu.item_count:
@@ -85,3 +87,7 @@ func _on_shop_bought(item: String) -> void:
 
 func _on_gadget_menu_item_selected(index: int) -> void:
 	DatabaseManager.chosen_starting_gadget = gadget_menu.get_item_text(index)
+
+func _on_h_slider_value_changed(value: float) -> void:
+	res_label.text = ("Scale Factor: " + str(value) + "x")
+	get_window().content_scale_factor = value
