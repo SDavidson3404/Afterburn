@@ -36,6 +36,25 @@ var coins: int = 1000
 var unlocked_gadgets: Array = []
 var chosen_starting_gadget: String = "None"
 
+## Maps gadget IDs and display names to their signature hex colors.
+const GADGET_COLOR_HEX: Dictionary = {
+	"pulse_wave": "#f233d9",
+	"Pulse Wave": "#f233d9",
+	"PULSE_WAVE": "#f233d9",
+	"magnet": "#f24040",
+	"Magnet": "#f24040",
+	"MAGNET": "#f24040",
+	"power_armor": "#33f259",
+	"Power Armor": "#33f259",
+	"POWER_ARMOR": "#33f259",
+	"hoverboard": "#ffffff",
+	"Hoverboard": "#ffffff",
+	"HOVERBOARD": "#ffffff",
+	"overdriven_rocket": "#ff8c00",
+	"Overdriven Rocket": "#ff8c00",
+	"OVERDRIVEN_ROCKET": "#ff8c00"
+}
+
 
 ## Initializes SQLite database connection and creates required tables upon engine launch.
 func _ready() -> void:
@@ -44,6 +63,7 @@ func _ready() -> void:
 	db.open_db()
 	
 	create_stats_table()
+	create_leaderboard_table()
 
 
 ## Executes SQL DDL query to establish the stats table schema if missing.
@@ -67,6 +87,80 @@ func create_stats_table() -> void:
 	);
 	"""
 	db.query(stats_query)
+
+
+## Executes SQL DDL query to establish the top 10 leaderboard table schema if missing.
+func create_leaderboard_table() -> void:
+	var leaderboard_query := """
+	CREATE TABLE IF NOT EXISTS leaderboard (
+		entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		player_name TEXT NOT NULL,
+		score INTEGER NOT NULL,
+		starting_gadget TEXT NOT NULL DEFAULT 'None'
+	);
+	"""
+	db.query(leaderboard_query)
+
+
+## Returns true if the given score qualifies for the Top 10 leaderboard.
+func is_top_10_score(score: int) -> bool:
+	if score <= 0:
+		return false
+	var current_top: Array = get_top_leaderboard(10)
+	if current_top.size() < 10:
+		return true
+	var lowest_top_score: int = int(current_top.back().get("score", 0))
+	return score > lowest_top_score
+
+
+## Inserts a new high score entry and trims the leaderboard table to the Top 10 scores.
+func add_leaderboard_entry(player_name: String, score: int, gadget_used: String = chosen_starting_gadget) -> void:
+	var clean_name: String = player_name.strip_edges()
+	if clean_name.is_empty():
+		clean_name = "PLAYER"
+
+	var clean_gadget: String = gadget_used.strip_edges()
+	if clean_gadget.is_empty() or clean_gadget == "None (Standard Run)":
+		clean_gadget = "None"
+
+	db.insert_row("leaderboard", {
+		"player_name": clean_name,
+		"score": score,
+		"starting_gadget": clean_gadget
+	})
+
+	# Keep only the top 10 rows ordered by highest score, breaking ties by earliest entry
+	var prune_query := """
+	DELETE FROM leaderboard
+	WHERE entry_id NOT IN (
+		SELECT entry_id FROM leaderboard
+		ORDER BY score DESC, entry_id ASC
+		LIMIT 10
+	);
+	"""
+	db.query(prune_query)
+
+
+## Queries and returns the top leaderboard entries sorted from highest to lowest score.
+func get_top_leaderboard(limit: int = 10) -> Array:
+	var query := """
+	SELECT entry_id, player_name, score, starting_gadget
+	FROM leaderboard
+	ORDER BY score DESC, entry_id ASC
+	LIMIT %d;
+	""" % limit
+	db.query(query)
+	return db.query_result.duplicate() if db.query_result else []
+
+
+## Returns a BBCode colored dash prefix for the given gadget, or an empty string if no gadget was used.
+func get_gadget_dash_bbcode(gadget_key: String) -> String:
+	if gadget_key.is_empty() or gadget_key == "None" or gadget_key == "None (Standard Run)":
+		return ""
+	var hex_color: String = GADGET_COLOR_HEX.get(gadget_key, "")
+	if hex_color.is_empty():
+		return ""
+	return "[b][color=%s]-[/color][/b] " % hex_color
 
 
 ## Tracks distance moved during an active run and calculates corresponding travel score points.
@@ -191,9 +285,9 @@ func lifetime_stats() -> Dictionary:
 		return db.query_result[0]
 	return {}
 
+
 func add_coins() -> int:
 	@warning_ignore("integer_division")
 	DatabaseManager.coins += display_score() / 300
 	@warning_ignore("integer_division")
 	return DatabaseManager.coins + display_score() / 300
-	

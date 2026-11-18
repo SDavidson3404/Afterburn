@@ -6,6 +6,23 @@ extends Node2D
 @onready var setting_panel: PanelContainer = $Settings/SettingPanel
 @onready var shop: CanvasLayer = $Shop
 @onready var gadget_menu: OptionButton = $Settings/SettingPanel/VBoxContainer/GadgetMenu
+@onready var scores_label: Control = $Leaderboard/LeaderboardPanel/VBoxContainer/Scores
+
+var leaderboard_rich_label: RichTextLabel = null
+
+const PLACE_NAMES: Array[String] = [
+	"1st Place:",
+	"2nd Place:",
+	"3rd Place:",
+	"4th Place:",
+	"5th Place:",
+	"6th Place:",
+	"7th Place:",
+	"8th Place:",
+	"9th Place:",
+	"10th Place:"
+]
+
 
 func _ready() -> void:
 	for item in DatabaseManager.unlocked_gadgets:
@@ -14,8 +31,13 @@ func _ready() -> void:
 		if gadget_menu.get_item_text(item) == DatabaseManager.chosen_starting_gadget:
 			gadget_menu.select(item)
 
+	_ensure_leaderboard_rich_label()
+	_update_leaderboard_display()
+
+
 func _on_quit_pressed() -> void:
 	get_tree().quit()
+
 
 func _on_stats_pressed() -> void:
 	_update_lifetime_stats_display()
@@ -23,6 +45,7 @@ func _on_stats_pressed() -> void:
 		stats_panel.hide()
 	else:
 		stats_panel.show()
+
 
 func _update_lifetime_stats_display() -> void:
 	if not stats_label:
@@ -49,14 +72,68 @@ func _update_lifetime_stats_display() -> void:
 	else:
 		stats_label.text = "Database not connected."
 
+
 func _on_start_game_pressed() -> void:
 	get_tree().change_scene_to_file("res://Core Files/testing_ground.tscn")
 
+
 func _on_leaderboard_pressed() -> void:
+	_update_leaderboard_display()
 	if leaderboard_panel.visible:
 		leaderboard_panel.hide()
 	else:
 		leaderboard_panel.show()
+
+
+## Ensures a BBCode-capable RichTextLabel is used in the LeaderboardPanel so per-entry colored dashes render properly.
+func _ensure_leaderboard_rich_label() -> void:
+	if leaderboard_rich_label != null:
+		return
+
+	var vbox: VBoxContainer = $Leaderboard/LeaderboardPanel/VBoxContainer
+	if scores_label is RichTextLabel:
+		leaderboard_rich_label = scores_label as RichTextLabel
+	else:
+		if scores_label:
+			scores_label.hide()
+		leaderboard_rich_label = RichTextLabel.new()
+		leaderboard_rich_label.name = "RichScores"
+		leaderboard_rich_label.bbcode_enabled = true
+		leaderboard_rich_label.fit_content = true
+		leaderboard_rich_label.scroll_active = false
+		leaderboard_rich_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		leaderboard_rich_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		leaderboard_rich_label.add_theme_font_size_override("normal_font_size", 21)
+		leaderboard_rich_label.add_theme_font_size_override("bold_font_size", 21)
+		vbox.add_child(leaderboard_rich_label)
+
+
+## Populates the Top 10 leaderboard with player names, scores, and gadget-colored dashes.
+func _update_leaderboard_display() -> void:
+	_ensure_leaderboard_rich_label()
+	if not leaderboard_rich_label:
+		return
+
+	var entries: Array = []
+	if get_node_or_null("/root/DatabaseManager"):
+		entries = DatabaseManager.get_top_leaderboard(10)
+
+	var lines: PackedStringArray = []
+	for i in range(10):
+		var place_title: String = PLACE_NAMES[i]
+		if i < entries.size():
+			var entry: Dictionary = entries[i]
+			var raw_name: String = str(entry.get("player_name", "PLAYER")).replace("[", "(").replace("]", ")")
+			var score_str: String = DatabaseManager.format_number(int(entry.get("score", 0)))
+			var gadget_key: String = str(entry.get("starting_gadget", "None"))
+			var colored_dash: String = DatabaseManager.get_gadget_dash_bbcode(gadget_key)
+			
+			lines.append("%s %s%s (%s)" % [place_title, colored_dash, raw_name, score_str])
+		else:
+			lines.append("%s ---" % place_title)
+
+	leaderboard_rich_label.text = "\n".join(lines)
+
 
 func _on_settings_pressed() -> void:
 	if setting_panel.visible:
@@ -64,11 +141,13 @@ func _on_settings_pressed() -> void:
 	else:
 		setting_panel.show()
 
+
 func _on_shop_pressed() -> void:
 	if shop.visible:
 		shop.hide()
 	else:
 		shop.show()
+
 
 func _on_shop_bought(item: String) -> void:
 	match item:
@@ -82,6 +161,7 @@ func _on_shop_bought(item: String) -> void:
 			gadget_menu.add_item("Hoverboard", 4)
 		"OVERDRIVEN_ROCKET":
 			gadget_menu.add_item("Overdriven Rocket", 5)
+
 
 func _on_gadget_menu_item_selected(index: int) -> void:
 	DatabaseManager.chosen_starting_gadget = gadget_menu.get_item_text(index)

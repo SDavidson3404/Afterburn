@@ -80,6 +80,10 @@ var speed_recovery_timer: float = 0.0
 func start_run() -> void:
 	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.reset_run_stats()
+		if selected_gadget and selected_gadget.gadget_id != "base_gadget":
+			DatabaseManager.chosen_starting_gadget = selected_gadget.gadget_id
+		else:
+			DatabaseManager.chosen_starting_gadget = "None"
 
 	# Reset suit modifiers and overdrive states to baseline defaults
 	is_overcharged = false

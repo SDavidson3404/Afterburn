@@ -43,8 +43,17 @@ func _ready() -> void:
 	for i in range(GADGET_OPTIONS.size()):
 		gadget_option.add_item(GADGET_OPTIONS[i]["name"], i)
 
-	# Restore previous selection index if available
-	if last_selected_gadget_index >= 0 and last_selected_gadget_index < GADGET_OPTIONS.size():
+	# Sync with gadget chosen in Main Menu Settings if set, otherwise restore last index
+	var matched_menu_gadget: bool = false
+	if get_node_or_null("/root/DatabaseManager") and DatabaseManager.chosen_starting_gadget != "None":
+		for i in range(GADGET_OPTIONS.size()):
+			if GADGET_OPTIONS[i]["name"] == DatabaseManager.chosen_starting_gadget or GADGET_OPTIONS[i]["id"] == DatabaseManager.chosen_starting_gadget:
+				gadget_option.selected = i
+				last_selected_gadget_index = i
+				matched_menu_gadget = true
+				break
+
+	if not matched_menu_gadget and last_selected_gadget_index >= 0 and last_selected_gadget_index < GADGET_OPTIONS.size():
 		gadget_option.selected = last_selected_gadget_index
 
 	gadget_panel.show()
