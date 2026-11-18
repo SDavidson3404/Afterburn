@@ -7,6 +7,8 @@ extends Node2D
 @onready var shop: CanvasLayer = $Shop
 @onready var gadget_menu: OptionButton = $Settings/SettingPanel/VBoxContainer/GadgetMenu
 @onready var scores_label: RichTextLabel = $Leaderboard/LeaderboardPanel/VBoxContainer/Scores
+@onready var res_label: Label = $Settings/SettingPanel/VBoxContainer/ResLabel
+@onready var h_slider: HSlider = $Settings/SettingPanel/VBoxContainer/HSlider
 
 const PLACE_NAMES: Array[String] = [
 	"1st Place:",
@@ -32,7 +34,11 @@ const DISPLAY_TO_ID: Dictionary = {
 
 
 func _ready() -> void:
-	res_label.text = ("Scale Factor: " + str(get_window().content_scale_factor) + "x")
+	if h_slider:
+		h_slider.value = get_window().content_scale_factor
+	if res_label:
+		res_label.text = "UI Scale: " + str(get_window().content_scale_factor) + "x"
+
 	for item in DatabaseManager.unlocked_gadgets:
 		_on_shop_bought(item)
 	for i in range(gadget_menu.item_count):
@@ -148,8 +154,11 @@ func _on_shop_bought(item: String) -> void:
 
 
 func _on_gadget_menu_item_selected(index: int) -> void:
-	DatabaseManager.chosen_starting_gadget = gadget_menu.get_item_text(index)
+	var selected_text: String = gadget_menu.get_item_text(index)
+	DatabaseManager.chosen_starting_gadget = DISPLAY_TO_ID.get(selected_text, "None")
+
 
 func _on_h_slider_value_changed(value: float) -> void:
-	res_label.text = ("Scale Factor: " + str(value) + "x")
+	if res_label:
+		res_label.text = "UI Scale: " + str(value) + "x"
 	get_window().content_scale_factor = value
