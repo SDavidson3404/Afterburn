@@ -166,31 +166,28 @@ func _physics_process(delta: float) -> void:
 	
 	# If you are dashing, set the velocity to current speed of the power, times the dash multiplier and set is dashing to false
 	if is_dashing:
-		body.velocity.z = -power_node.current_speed * dash_multiplier
+		var target_vel_z: float = -power_node.current_speed
+		body.velocity.z = target_vel_z * dash_multiplier
 		is_dashing = false
-		dash_decel_rate = 0.0
+		var excess_speed: float = abs(body.velocity.z - target_vel_z)
+		var decel_duration: float = 1.0 / maxf(dash_decel_multiplier, 0.01)
+		dash_decel_rate = excess_speed / maxf(decel_duration, 0.01)
 	
 	# Otherwise if you are starting the run, set the initial velocity and note that it was set up
 	elif starting_run:
 		body.velocity.z = -power_node.current_speed
 		starting_run = false
+		dash_decel_rate = 0.0
 	
 	# If neither are true, change the speed towards the current speed in power
 	else:
 		var target_vel_z: float = -power_node.current_speed
 		
-		# Always finish dash deceleration (1.0s normal / 2.5s with Hoverboard) before coasting takes over
-		if body.velocity.z < target_vel_z:
-			if dash_decel_rate <= 0.0:
-				var excess_speed: float = abs(body.velocity.z - target_vel_z)
-				var decel_duration: float = 1.0 / maxf(dash_decel_multiplier, 0.01)
-				dash_decel_rate = excess_speed / maxf(decel_duration, 0.01)
-			
+		# Only use dash_decel_rate when actively decelerating from a dash
+		if dash_decel_rate > 0.0 and body.velocity.z < target_vel_z:
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, dash_decel_rate * delta)
-		elif power_node and power_node.is_coasting:
-			# Once dash speed returns to target speed, let power.gd's coasting deceleration dictate speed
-			dash_decel_rate = 0.0
-			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
+			if is_equal_approx(body.velocity.z, target_vel_z) or body.velocity.z >= target_vel_z:
+				dash_decel_rate = 0.0
 		else:
 			dash_decel_rate = 0.0
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
