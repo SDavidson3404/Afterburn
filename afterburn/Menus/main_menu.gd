@@ -6,9 +6,7 @@ extends Node2D
 @onready var setting_panel: PanelContainer = $Settings/SettingPanel
 @onready var shop: CanvasLayer = $Shop
 @onready var gadget_menu: OptionButton = $Settings/SettingPanel/VBoxContainer/GadgetMenu
-@onready var scores_label: Control = $Leaderboard/LeaderboardPanel/VBoxContainer/Scores
-
-var leaderboard_rich_label: RichTextLabel = null
+@onready var scores_label: RichTextLabel = $Leaderboard/LeaderboardPanel/VBoxContainer/Scores
 
 const PLACE_NAMES: Array[String] = [
 	"1st Place:",
@@ -23,15 +21,24 @@ const PLACE_NAMES: Array[String] = [
 	"10th Place:"
 ]
 
+const DISPLAY_TO_ID: Dictionary = {
+	"None": "None",
+	"Pulse Wave": "pulse_wave",
+	"Magnet": "magnet",
+	"Power Armor": "power_armor",
+	"Hoverboard": "hoverboard",
+	"Overdriven Rocket": "overdriven_rocket"
+}
+
 
 func _ready() -> void:
 	for item in DatabaseManager.unlocked_gadgets:
 		_on_shop_bought(item)
-	for item in gadget_menu.item_count:
-		if gadget_menu.get_item_text(item) == DatabaseManager.chosen_starting_gadget:
-			gadget_menu.select(item)
+	for i in range(gadget_menu.item_count):
+		var item_text: String = gadget_menu.get_item_text(i)
+		if DISPLAY_TO_ID.get(item_text, "None") == DatabaseManager.chosen_starting_gadget or item_text == DatabaseManager.chosen_starting_gadget:
+			gadget_menu.select(i)
 
-	_ensure_leaderboard_rich_label()
 	_update_leaderboard_display()
 
 
@@ -85,33 +92,9 @@ func _on_leaderboard_pressed() -> void:
 		leaderboard_panel.show()
 
 
-## Ensures a BBCode-capable RichTextLabel is used in the LeaderboardPanel so per-entry colored dashes render properly.
-func _ensure_leaderboard_rich_label() -> void:
-	if leaderboard_rich_label != null:
-		return
-
-	var vbox: VBoxContainer = $Leaderboard/LeaderboardPanel/VBoxContainer
-	if scores_label is RichTextLabel:
-		leaderboard_rich_label = scores_label as RichTextLabel
-	else:
-		if scores_label:
-			scores_label.hide()
-		leaderboard_rich_label = RichTextLabel.new()
-		leaderboard_rich_label.name = "RichScores"
-		leaderboard_rich_label.bbcode_enabled = true
-		leaderboard_rich_label.fit_content = true
-		leaderboard_rich_label.scroll_active = false
-		leaderboard_rich_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		leaderboard_rich_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		leaderboard_rich_label.add_theme_font_size_override("normal_font_size", 21)
-		leaderboard_rich_label.add_theme_font_size_override("bold_font_size", 21)
-		vbox.add_child(leaderboard_rich_label)
-
-
-## Populates the Top 10 leaderboard with player names, scores, and gadget-colored dashes.
+## Populates the Top 10 leaderboard RichTextLabel with player names, scores, and gadget-colored dashes.
 func _update_leaderboard_display() -> void:
-	_ensure_leaderboard_rich_label()
-	if not leaderboard_rich_label:
+	if not scores_label:
 		return
 
 	var entries: Array = []
@@ -132,7 +115,7 @@ func _update_leaderboard_display() -> void:
 		else:
 			lines.append("%s ---" % place_title)
 
-	leaderboard_rich_label.text = "\n".join(lines)
+	scores_label.text = "\n".join(lines)
 
 
 func _on_settings_pressed() -> void:
@@ -150,18 +133,19 @@ func _on_shop_pressed() -> void:
 
 
 func _on_shop_bought(item: String) -> void:
-	match item:
-		"PULSE_WAVE":
+	match item.to_lower():
+		"pulse_wave":
 			gadget_menu.add_item("Pulse Wave", 1)
-		"MAGNET":
+		"magnet":
 			gadget_menu.add_item("Magnet", 2)
-		"POWER_ARMOR":
+		"power_armor":
 			gadget_menu.add_item("Power Armor", 3)
-		"HOVERBOARD":
+		"hoverboard":
 			gadget_menu.add_item("Hoverboard", 4)
-		"OVERDRIVEN_ROCKET":
+		"overdriven_rocket":
 			gadget_menu.add_item("Overdriven Rocket", 5)
 
 
 func _on_gadget_menu_item_selected(index: int) -> void:
-	DatabaseManager.chosen_starting_gadget = gadget_menu.get_item_text(index)
+	var selected_text: String = gadget_menu.get_item_text(index)
+	DatabaseManager.chosen_starting_gadget = DISPLAY_TO_ID.get(selected_text, "None")
