@@ -1,10 +1,7 @@
-## Main Menu and Loadout interface script.
-## Handles main menu navigation (Start, Stats, Exit), gadget selection, lifetime stat displays, and mouse state transitions.
+## Pre-run Loadout interface script.
+## Displays only unlocked gadgets (plus Standard Run) and initializes the player's equipped gadget.
 class_name LoadoutUI
 extends Control
-
-## Static variable preserving the last selected gadget index across respawns
-static var last_selected_gadget_index: int = 0
 
 @export_category("Node References")
 ## Reference to the main power manager node responsible for tracking run state.
@@ -17,7 +14,7 @@ static var last_selected_gadget_index: int = 0
 @onready var gadget_option: OptionButton = %GadgetOption
 @onready var confirm_start_button: Button = %ConfirmStartButton
 
-## Registry mapping display names to GadgetBase string IDs.
+## Master registry mapping display names to GadgetBase string IDs.
 const GADGET_OPTIONS: Array[Dictionary] = [
 	{"name": "None (Standard Run)", "id": "None"},
 	{"name": "Pulse Wave", "id": "pulse_wave"},
@@ -26,6 +23,9 @@ const GADGET_OPTIONS: Array[Dictionary] = [
 	{"name": "Hoverboard", "id": "hoverboard"},
 	{"name": "Overdriven Rocket", "id": "overdriven_rocket"}
 ]
+
+## Filtered options currently shown in the OptionButton (None + unlocked gadgets).
+var _available_options: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -38,28 +38,31 @@ func _ready() -> void:
 	if gadget_option:
 		gadget_option.focus_mode = Control.FOCUS_NONE
 
-	# Populate gadget options
+	# Populate dropdown with Standard Run + permanently unlocked gadgets only
+	_available_options.clear()
 	gadget_option.clear()
-	for i in range(GADGET_OPTIONS.size()):
-		gadget_option.add_item(GADGET_OPTIONS[i]["name"], i)
 
-	# Sync with gadget ID chosen in Main Menu Settings if set, otherwise restore last index
-	var matched_menu_gadget: bool = false
-	if get_node_or_null("/root/DatabaseManager") and DatabaseManager.chosen_starting_gadget != "None":
-		for i in range(GADGET_OPTIONS.size()):
-			if GADGET_OPTIONS[i]["id"] == DatabaseManager.chosen_starting_gadget:
-				gadget_option.selected = i
-				last_selected_gadget_index = i
-				matched_menu_gadget = true
-				break
+	var db_mgr = get_node_or_null("/root/DatabaseManager")
+	for opt in GADGET_OPTIONS:
+		var gid: String = opt["id"]
+		if gid == "None" or (db_mgr and db_mgr.is_gadget_unlocked(gid)):
+			_available_options.append(opt)
+			gadget_option.add_item(opt["name"], _available_options.size() - 1)
 
-	if not matched_menu_gadget and last_selected_gadget_index >= 0 and last_selected_gadget_index < GADGET_OPTIONS.size():
-		gadget_option.selected = last_selected_gadget_index
+	# Select the gadget chosen in Main Menu Settings or used in the last run
+	var target_id: String = db_mgr.chosen_starting_gadget if db_mgr else "None"
+	gadget_option.selected = 0
+	for i in range(_available_options.size()):
+		if _available_options[i]["id"] == target_id:
+			gadget_option.selected = i
+			break
 
 	gadget_panel.show()
 
+
 func _on_exit_menu_button_pressed() -> void:
 	get_tree().change_scene_to_file("res://Menus/main_menu.tscn")
+
 
 func _on_confirm_start_button_pressed() -> void:
 	if not power_node:
@@ -71,10 +74,8 @@ func _on_confirm_start_button_pressed() -> void:
 		power_node.selected_gadget = null
 
 	var selected_idx: int = gadget_option.selected
-	last_selected_gadget_index = selected_idx
-
-	if selected_idx >= 0 and selected_idx < GADGET_OPTIONS.size():
-		var gadget_id: String = GADGET_OPTIONS[selected_idx]["id"]
+	if selected_idx >= 0 and selected_idx < _available_options.size():
+		var gadget_id: String = _available_options[selected_idx]["id"]
 		if gadget_id != "None":
 			var gadget_instance: GadgetBase = GadgetBase.create_by_id(gadget_id)
 			if gadget_instance:

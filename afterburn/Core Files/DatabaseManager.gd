@@ -1,4 +1,4 @@
-## Singleton database manager handling real-time run telemetry, score calculations, SQLite data persistence, and aggregate lifetime analytics.
+## Singleton database manager handling real-time run telemetry, score calculations, SQLite data persistence, store unlocks, and aggregate lifetime analytics.
 extends Node
 
 ## SQLite database instance reference.
@@ -22,6 +22,17 @@ var crystal_score: int = 0
 const GADGET_POINTS: int = 1000
 var gadget_score: int = 0
 
+# Store & Coin Economy constants
+const POINTS_PER_COIN: int = 100
+const GADGET_COST: int = 1000
+const GADGET_UNLOCK_ORDER: Array[String] = [
+	"pulse_wave",
+	"magnet",
+	"power_armor",
+	"hoverboard",
+	"overdriven_rocket"
+]
+
 # Stat tracking counters logged during each run
 var power_crystals: int = 0
 var gadgets: int = 0
@@ -31,9 +42,10 @@ var robot_crash: int = 0
 var scaffolding_crash: int = 0
 var drone_crash: int = 0
 
-# Shop Related Things
+# Shop Related Things (persisted in SQLite)
 var coins: int = 0
-var unlocked_gadgets: Array = []
+var last_run_coins_earned: int = 0
+var unlocked_gadgets: Array[String] = []
 var chosen_starting_gadget: String = "None"
 
 ## Maps gadget IDs to their signature hex colors.
@@ -46,7 +58,7 @@ const GADGET_COLOR_HEX: Dictionary = {
 }
 
 
-## Initializes SQLite database connection and creates required tables upon engine launch.
+## Initializes SQLite database connection, creates required tables, and loads saved store state.
 func _ready() -> void:
 	db = SQLite.new()
 	db.path = "user://game_data.db"
@@ -54,6 +66,8 @@ func _ready() -> void:
 	
 	create_stats_table()
 	create_leaderboard_table()
+	create_store_tables()
+	load_store_data()
 
 
 ## Executes SQL DDL query to establish the stats table schema if missing.
@@ -90,6 +104,86 @@ func create_leaderboard_table() -> void:
 	);
 	"""
 	db.query(leaderboard_query)
+
+
+## Executes SQL DDL queries to establish persistent wallet and unlocked gadget tables.
+func create_store_tables() -> void:
+	var wallet_query := """
+	CREATE TABLE IF NOT EXISTS player_wallet (
+		wallet_id INTEGER PRIMARY KEY CHECK (wallet_id = 1),
+		coins INTEGER NOT NULL DEFAULT 0,
+		chosen_starting_gadget TEXT NOT NULL DEFAULT 'None'
+	);
+	"""
+	db.query(wallet_query)
+	db.query("INSERT OR IGNORE INTO player_wallet (wallet_id, coins, chosen_starting_gadget) VALUES (1, 0, 'None');")
+
+	var unlocks_query := """
+	CREATE TABLE IF NOT EXISTS unlocked_gadgets (
+		gadget_id TEXT PRIMARY KEY
+	);
+	"""
+	db.query(unlocks_query)
+
+
+## Loads persisted coin balance, chosen starting gadget, and permanently unlocked gadgets from SQLite.
+func load_store_data() -> void:
+	db.query("SELECT coins, chosen_starting_gadget FROM player_wallet WHERE wallet_id = 1;")
+	if db.query_result and db.query_result.size() > 0:
+		coins = int(db.query_result[0].get("coins", 0))
+		chosen_starting_gadget = str(db.query_result[0].get("chosen_starting_gadget", "None"))
+
+	unlocked_gadgets.clear()
+	db.query("SELECT gadget_id FROM unlocked_gadgets;")
+	if db.query_result:
+		for row in db.query_result:
+			var gid: String = str(row.get("gadget_id", ""))
+			if not gid.is_empty() and not unlocked_gadgets.has(gid):
+				unlocked_gadgets.append(gid)
+
+	# Ensure the saved starting gadget is actually unlocked
+	if chosen_starting_gadget != "None" and not unlocked_gadgets.has(chosen_starting_gadget):
+		chosen_starting_gadget = "None"
+		save_wallet()
+
+
+## Saves current coin balance and chosen starting gadget to SQLite.
+func save_wallet() -> void:
+	var safe_gadget: String = chosen_starting_gadget.replace("'", "''")
+	db.query("UPDATE player_wallet SET coins = %d, chosen_starting_gadget = '%s' WHERE wallet_id = 1;" % [coins, safe_gadget])
+
+
+## Returns true if the given gadget ID has been permanently unlocked.
+func is_gadget_unlocked(gadget_id: String) -> bool:
+	return unlocked_gadgets.has(gadget_id)
+
+
+## Returns the next gadget ID in the sequential unlock order, or "" if all are unlocked.
+func get_next_purchasable_gadget() -> String:
+	for gid in GADGET_UNLOCK_ORDER:
+		if not unlocked_gadgets.has(gid):
+			return gid
+	return ""
+
+
+## Attempts to purchase and permanently unlock a gadget in sequential order.
+## Returns one of: "UNLOCKED", "NOT_ENOUGH", "LOCKED", or "ALREADY_UNLOCKED".
+func purchase_gadget(gadget_id: String) -> String:
+	if is_gadget_unlocked(gadget_id):
+		return "ALREADY_UNLOCKED"
+
+	if gadget_id != get_next_purchasable_gadget():
+		return "LOCKED"
+
+	if coins < GADGET_COST:
+		return "NOT_ENOUGH"
+
+	coins -= GADGET_COST
+	unlocked_gadgets.append(gadget_id)
+	var safe_id: String = gadget_id.replace("'", "''")
+	db.query("INSERT OR IGNORE INTO unlocked_gadgets (gadget_id) VALUES ('%s');" % safe_id)
+	save_wallet()
+	return "UNLOCKED"
 
 
 ## Returns true if the given score qualifies for the Top 10 leaderboard.
@@ -248,6 +342,7 @@ func reset_run_stats() -> void:
 	robot_crash = 0
 	scaffolding_crash = 0
 	drone_crash = 0
+	last_run_coins_earned = 0
 
 
 ## Queries database for high scores and aggregated lifetime player analytics.
@@ -276,9 +371,12 @@ func lifetime_stats() -> Dictionary:
 	return {}
 
 
+## Awards 1 coin per 100 points scored in the completed run and persists the new balance.
 func add_coins() -> int:
 	@warning_ignore("integer_division")
-	DatabaseManager.coins += display_score() / 300
-	@warning_ignore("integer_division")
-	return display_score() / 300
-	
+	var earned: int = display_score() / POINTS_PER_COIN
+	last_run_coins_earned = earned
+	if earned > 0:
+		coins += earned
+		save_wallet()
+	return earned

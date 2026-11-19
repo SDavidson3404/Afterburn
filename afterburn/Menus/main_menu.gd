@@ -136,26 +136,46 @@ func _on_shop_pressed() -> void:
 	if shop.visible:
 		shop.hide()
 	else:
+		if shop.has_method("refresh_shop_ui"):
+			shop.refresh_shop_ui()
 		shop.show()
 
 
 func _on_shop_bought(item: String) -> void:
+	var display_name: String = ""
+	var item_id: int = 0
 	match item.to_lower():
 		"pulse_wave":
-			gadget_menu.add_item("Pulse Wave", 1)
+			display_name = "Pulse Wave"
+			item_id = 1
 		"magnet":
-			gadget_menu.add_item("Magnet", 2)
+			display_name = "Magnet"
+			item_id = 2
 		"power_armor":
-			gadget_menu.add_item("Power Armor", 3)
+			display_name = "Power Armor"
+			item_id = 3
 		"hoverboard":
-			gadget_menu.add_item("Hoverboard", 4)
+			display_name = "Hoverboard"
+			item_id = 4
 		"overdriven_rocket":
-			gadget_menu.add_item("Overdriven Rocket", 5)
+			display_name = "Overdriven Rocket"
+			item_id = 5
+
+	if display_name.is_empty():
+		return
+
+	# Prevent duplicate entries in GadgetMenu
+	for i in range(gadget_menu.item_count):
+		if gadget_menu.get_item_text(i) == display_name:
+			return
+
+	gadget_menu.add_item(display_name, item_id)
 
 
 func _on_gadget_menu_item_selected(index: int) -> void:
 	var selected_text: String = gadget_menu.get_item_text(index)
 	DatabaseManager.chosen_starting_gadget = DISPLAY_TO_ID.get(selected_text, "None")
+	DatabaseManager.save_wallet()
 
 
 func _on_h_slider_value_changed(value: float) -> void:

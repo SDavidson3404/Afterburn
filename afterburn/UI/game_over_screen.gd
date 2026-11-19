@@ -46,13 +46,16 @@ func _update_run_stats() -> void:
 	if get_node_or_null("/root/DatabaseManager"):
 		var total_dodges: int = DatabaseManager.jump_obstacle + DatabaseManager.slide_obstacle
 		_pending_score = DatabaseManager.display_score()
+		var coins_earned: int = DatabaseManager.last_run_coins_earned
 		
 		stats_label.text = (
 			"FINAL SCORE: %s\n" % DatabaseManager.format_number(_pending_score) +
 			"Distance: %sm\n" % DatabaseManager.format_number(DatabaseManager.total_distance_meters) +
 			"Crystals Collected: %s\n" % DatabaseManager.format_number(DatabaseManager.power_crystals) +
 			"Obstacles Dodged: %s\n" % DatabaseManager.format_number(total_dodges) +
-			"Gadgets Picked Up: %s\n" % DatabaseManager.format_number(DatabaseManager.gadgets)
+			"Gadgets Picked Up: %s\n" % DatabaseManager.format_number(DatabaseManager.gadgets) +
+			"Coins Earned: %s\n" % DatabaseManager.format_number(coins_earned) +
+			"Total Coins: %s" % DatabaseManager.format_number(DatabaseManager.coins)
 		)
 	else:
 		_pending_score = 0

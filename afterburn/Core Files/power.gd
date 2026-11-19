@@ -84,6 +84,7 @@ func start_run() -> void:
 			DatabaseManager.chosen_starting_gadget = selected_gadget.gadget_id
 		else:
 			DatabaseManager.chosen_starting_gadget = "None"
+		DatabaseManager.save_wallet()
 
 	# Reset suit modifiers and overdrive states to baseline defaults
 	is_overcharged = false
@@ -455,13 +456,14 @@ func obstacle_hit(damage: float = 25.0) -> void:
 		_handle_zero_power()
 
 
-## Terminates active run, saves statistics to SQLite database, and optionally fires game over signal.
+## Terminates active run, saves statistics and earned coins to SQLite, and optionally fires game over signal.
 func end_run(emit_game_over: bool = true) -> void:
 	if not is_run_active:
 		return
 
 	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.save_run()
+		DatabaseManager.add_coins()
 		
 	is_run_active = false
 	is_coasting = false
