@@ -77,7 +77,7 @@ script = ExtResource("1_jf8mj")
 [node name="PanelContainer" type="PanelContainer" parent="Menu" unique_id=1204682936]
 offset_left = 13.0
 offset_top = 274.0
-offset_right = 722.0
+offset_right = 550.0
 offset_bottom = 626.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Menu/PanelContainer" unique_id=362749381]
@@ -175,7 +175,7 @@ text = "Loading stats..."
 
 [node name="LeaderboardPanel" type="PanelContainer" parent="Leaderboard" unique_id=77991920]
 visible = false
-offset_left = 736.0
+offset_left = 570.0
 offset_top = 320.0
 offset_right = 1135.0
 offset_bottom = 636.0
