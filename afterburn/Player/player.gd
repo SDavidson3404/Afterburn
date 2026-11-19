@@ -9,6 +9,7 @@ signal dashing # A signal for when dashing
 @onready var score_label: Label = $Body/UI/ScoreLabel # The label which shows the score
 @onready var row_squares: Node2D = $Body/UI/Row_Squares # The parent node of the row indicators
 @onready var body: CharacterBody3D = $Body # The body of the player
+@onready var collision_shape: CollisionShape3D = $Body/CollisionShape3D
 @onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator" # An inidicator for when invincible
 @onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
@@ -48,6 +49,7 @@ var jump_velocity_multiplier: float = 1.0
 var gravity_multiplier: float = 1.0
 var dash_decel_multiplier: float = 1.0
 var dash_decel_rate: float = 0.0
+var _hit_blink_tween: Tween = null
 
 ## Runs when the scene is instanced or loaded in
 func _ready() -> void:
@@ -147,7 +149,7 @@ func _physics_process(delta: float) -> void:
 	afterburner.speed_scale = afterburner_speed
 	afterburner.amount = afterburner_amount
 	
-	if model and model.has_method("play_anim") and not animation_player.is_playing():
+	if model and model.has_method("play_anim") and not is_sliding:
 		model.play_anim("Idle")
 	# Set the power meter to reflect the current power
 	if power_meter:
@@ -201,13 +203,9 @@ func _physics_process(delta: float) -> void:
 	# Runs if space is pressed and you are on the floor
 	if Input.is_action_just_pressed("Space") and body.is_on_floor():
 		
-		# If you are sliding, cancel it
+		# If you are sliding, cancel it and immediately restore the upright hitbox
 		if is_sliding:
-			if animation_player.current_animation == "Slide":
-				animation_player.stop()
-				
-			is_sliding = false
-			current_slide_dodge_count = 0
+			_end_slide()
 		
 		# Apply jump velocity and start jump maneuver
 		body.velocity.y += (JUMP_VELOCITY * jump_velocity_multiplier)
@@ -271,6 +269,7 @@ func connect_signals():
 	power_node.power_changed.connect(_on_power_changed)
 	power_node.game_over_triggered.connect(lose)
 	Wall_Detection.Wall_Hit.connect(hit)
+	animation_player.animation_finished.connect(_on_animation_finished)
 
 ## Updates the power meter color when suit power changes
 func _on_power_changed(current_power: float, _max_power: float) -> void:
@@ -311,7 +310,7 @@ func lose() -> void:
 		game_over_screen.show_game_over()
 
 ## Begins the sliding state
-func slide():
+func slide() -> void:
 	if model and "animation_player" in model and model.animation_player:
 		model.animation_player.stop()
 		
@@ -320,19 +319,49 @@ func slide():
 	is_sliding = true
 	current_slide_dodge_count = 0
 	
-	# Play the animation and wait for it to finish
+	# Play the hitbox and model slide animations
 	animation_player.play("Slide")
 	if model and model.has_method("play_anim"):
 		model.play_anim("Slide")
-		
-	await animation_player.animation_finished
-	
-	# Set sliding to false
+
+## Resets slide state and restores upright hitbox when Slide finishes or is jump-canceled
+func _end_slide() -> void:
+	if animation_player.is_playing() and animation_player.current_animation == "Slide":
+		animation_player.stop()
+	if collision_shape:
+		collision_shape.position = Vector3.ZERO
+		collision_shape.rotation = Vector3.ZERO
+	if model and "animation_player" in model and model.animation_player:
+		if model.animation_player.current_animation == "Slide":
+			model.animation_player.stop()
 	is_sliding = false
 	current_slide_dodge_count = 0
 
-## Runs the hit wall animation upon being called
-func hit():
+## Signal callback when Body's AnimationPlayer completes an animation
+func _on_animation_finished(anim_name: StringName) -> void:
+	if anim_name == &"Slide":
+		_end_slide()
+
+## Runs the hit blink effect independently without interrupting an active Slide
+func hit() -> void:
 	cancel_dodge_maneuver()
-	animation_player.stop()
-	animation_player.play("Hit_Wall")
+	_play_hit_blink()
+
+## Blinks the player body using a dedicated Tween that always restores visibility
+func _play_hit_blink() -> void:
+	if _hit_blink_tween and _hit_blink_tween.is_valid():
+		_hit_blink_tween.kill()
+	body.visible = true
+
+	_hit_blink_tween = create_tween()
+	_hit_blink_tween.tween_callback(func(): body.visible = false)
+	_hit_blink_tween.tween_interval(0.167)
+	_hit_blink_tween.tween_callback(func(): body.visible = true)
+	_hit_blink_tween.tween_interval(0.333)
+	_hit_blink_tween.tween_callback(func(): body.visible = false)
+	_hit_blink_tween.tween_interval(0.167)
+	_hit_blink_tween.tween_callback(func(): body.visible = true)
+	_hit_blink_tween.tween_interval(0.323)
+	_hit_blink_tween.tween_callback(func(): body.visible = false)
+	_hit_blink_tween.tween_interval(0.177)
+	_hit_blink_tween.tween_callback(func(): body.visible = true)
