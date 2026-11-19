@@ -35,14 +35,12 @@ var _is_waiting_to_spawn: bool = false
 func _ready() -> void:
 	_calculate_and_start_spawn_timer()
 
-
 ## Safely extracts the player's physical CharacterBody3D node or returns the root player node.
 func _get_player_body() -> Node3D:
 	if not player:
 		return null
 	var body_node = player.get("body")
 	return body_node as Node3D if body_node else player
-
 
 func _process(delta: float) -> void:
 	if not power or not power.get("is_run_active"):
@@ -68,7 +66,6 @@ func _process(delta: float) -> void:
 		if _spawn_timer <= 0.0:
 			_is_waiting_to_spawn = false
 			spawn_crystal()
-
 
 ## Projects and instantiates a new fuel crystal ahead of the player in 3D space.
 func spawn_crystal() -> void:
@@ -108,13 +105,11 @@ func spawn_crystal() -> void:
 	# Terminal Debug Log
 	print("[ITEM SPAWN] Power Crystal spawned at position: ", crystal.global_position, " (Lane: ", random_lane + 1, ")")
 
-
 func _on_crystal_tree_exited() -> void:
 	if _active_crystal == null: # Already cleared by pickup or miss
 		return
 	_active_crystal = null
 	_calculate_and_start_spawn_timer()
-
 
 ## Callback triggered when player collects the active crystal.
 func on_crystal_collected() -> void:
@@ -125,7 +120,6 @@ func on_crystal_collected() -> void:
 		DatabaseManager.add_crystal()
 	_calculate_and_start_spawn_timer()
 
-
 ## Callback triggered when active crystal passes behind player uncollected.
 func on_crystal_missed() -> void:
 	if is_instance_valid(_active_crystal):
@@ -133,13 +127,11 @@ func on_crystal_missed() -> void:
 	_clear_active_crystal()
 	_calculate_and_start_spawn_timer()
 
-
 ## Frees active crystal node from memory and clears local reference.
 func _clear_active_crystal() -> void:
 	if is_instance_valid(_active_crystal):
 		_active_crystal.queue_free()
 		_active_crystal = null
-
 
 ## Calculates spawn timer delay factoring in random drain bounds, invincibility, and reaction time.
 func _calculate_and_start_spawn_timer() -> void:

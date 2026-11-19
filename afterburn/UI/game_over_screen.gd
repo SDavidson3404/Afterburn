@@ -7,11 +7,6 @@ extends CanvasLayer
 func _ready() -> void:
 	process_mode = PROCESS_MODE_ALWAYS
 	hide()
-	
-	if respawn_button:
-		respawn_button.pressed.connect(_on_respawn_pressed)
-	if menu_button:
-		menu_button.pressed.connect(_on_menu_pressed)
 
 
 ## Displays the Game Over screen, populates run stats, and unhides mouse cursor
@@ -69,4 +64,4 @@ func _on_respawn_pressed() -> void:
 func _on_menu_pressed() -> void:
 	hide()
 	get_tree().paused = false
-	get_tree().reload_current_scene()
+	get_tree().change_scene_to_file("res://Menus/main_menu.tscn")

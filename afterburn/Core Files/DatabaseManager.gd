@@ -34,6 +34,8 @@ var drone_crash: int = 0
 # Shop Related Things
 var coins: int = 100
 var unlocked_gadgets: Array = []
+
+# Starting Gadget
 var chosen_starting_gadget: String = "None"
 
 
