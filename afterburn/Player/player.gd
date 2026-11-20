@@ -13,7 +13,7 @@ signal dashing # A signal for when dashing
 @onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
 @onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
-@onready var model: Node3D = get_node_or_null("Body/Main Character Placeholder")
+@onready var model: Node3D = $Body/Model
 @onready var afterburner: GPUParticles3D = $Body/FireParticles/GPUParticles3D
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit

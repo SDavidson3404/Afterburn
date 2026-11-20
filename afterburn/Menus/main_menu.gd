@@ -7,6 +7,7 @@ extends Node2D
 @onready var shop: CanvasLayer = $Shop
 @onready var gadget_menu: OptionButton = $Settings/SettingPanel/VBoxContainer/GadgetMenu
 @onready var res_label: Label = $Settings/SettingPanel/VBoxContainer/ResLabel
+@onready var reset_button: Button = $Settings/SettingPanel/VBoxContainer/ResetButton
 
 func _ready() -> void:
 	res_label.text = ("Scale Factor: " + str(get_window().content_scale_factor) + "x")
@@ -91,3 +92,14 @@ func _on_gadget_menu_item_selected(index: int) -> void:
 func _on_h_slider_value_changed(value: float) -> void:
 	res_label.text = ("Scale Factor: " + str(value) + "x")
 	get_window().content_scale_factor = value
+
+func _on_reset_button_pressed() -> void:
+	if reset_button.text == "ARE YOU SURE?!":
+		reset_progress()
+	else:
+		reset_button.text = "ARE YOU SURE?!"
+		await get_tree().create_timer(3).timeout
+		reset_button.text = "CLICK HERE TO RESET"
+
+func reset_progress() -> void:
+	print("INSERT METHOD HERE")

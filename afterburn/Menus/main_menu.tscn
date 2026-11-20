@@ -234,6 +234,16 @@ item_count = 1
 popup/item_0/text = "None"
 popup/item_0/id = 0
 
+[node name="ResLabel2" type="Label" parent="Settings/SettingPanel/VBoxContainer" unique_id=1898756345]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Reset Save?:"
+
+[node name="ResetButton" type="Button" parent="Settings/SettingPanel/VBoxContainer" unique_id=1732939068]
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "CLICK HERE TO RESET"
+
 [node name="Shop" type="CanvasLayer" parent="." unique_id=861703169]
 visible = false
 script = ExtResource("2_p3jrs")
@@ -341,6 +351,7 @@ text = "500"
 [connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Quit" to="." method="_on_quit_pressed"]
 [connection signal="value_changed" from="Settings/SettingPanel/VBoxContainer/HSlider" to="." method="_on_h_slider_value_changed"]
 [connection signal="item_selected" from="Settings/SettingPanel/VBoxContainer/GadgetMenu" to="." method="_on_gadget_menu_item_selected"]
+[connection signal="pressed" from="Settings/SettingPanel/VBoxContainer/ResetButton" to="." method="_on_reset_button_pressed"]
 [connection signal="bought" from="Shop" to="." method="_on_shop_bought"]
 [connection signal="pressed" from="Shop/Buttons/PulseButton" to="Shop" method="get_item" binds= [0]]
 [connection signal="pressed" from="Shop/Buttons/MagButton" to="Shop" method="get_item" binds= [1]]

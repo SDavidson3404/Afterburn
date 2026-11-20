@@ -138,7 +138,7 @@ script = ExtResource("1_l8h54")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Body" unique_id=1107740713]
 shape = SubResource("CapsuleShape3D_r8tgl")
 
-[node name="Main Character Placeholder" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
+[node name="Model" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
 transform = Transform3D(-6.5567085e-09, 0, 0.15, 0, 0.15, 0, -0.15, 0, -6.5567085e-09, 0, 0.49828595, 0)
 
 [node name="Skateboard" parent="Body" unique_id=401567063 instance=ExtResource("3_gwnis")]
