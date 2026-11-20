@@ -5,9 +5,6 @@ extends CanvasLayer
 ## Reference to the main power manager node tracking run state.
 @export var power_node: Node
 
-## Reference to the main LoadoutUI control node.
-@export var loadout_ui: Control
-
 @onready var pause_panel: PanelContainer = $Control/PausePanel
 @onready var resume_button: Button = $Control/PausePanel/VBoxContainer/ResumeButton
 @onready var exit_button: Button = $Control/PausePanel/VBoxContainer/ExitButton
@@ -162,9 +159,9 @@ func _on_confirm_yes_pressed() -> void:
 	get_tree().paused = false
 	hide_all()
 
-	# Call power manager end_run() to persist telemetry and terminate run state
+	# Save run telemetry without triggering the GameOverScreen UI while changing scenes
 	if power_node and power_node.has_method("end_run"):
-		power_node.end_run()
+		power_node.end_run(false)
 	elif get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.save_run()
 		DatabaseManager.reset_run_stats()
@@ -172,7 +169,7 @@ func _on_confirm_yes_pressed() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 	# Reload scene to reset world position, procedural track generator, and display Main Menu
-	get_tree().reload_current_scene()
+	get_tree().change_scene_to_file("res://Menus/main_menu.tscn")
 
 
 ## Hides menu controls and starts the 1-second millisecond countdown.

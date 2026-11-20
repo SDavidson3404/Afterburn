@@ -88,7 +88,7 @@ func _update_circle_stack() -> void:
 	var active_magnet = player.get_node_or_null("MagnetInstance")
 	var active_armor = player.get_node_or_null("PowerArmorInstance")
 
-	# 1. Primary equipped loadout gadget indicator (Right Side HUD)
+	# 1. Primary equipped loadout gadget indicator (Right side HUD)
 	if gadget and equipped_id != "base_gadget":
 		var primary_circle := CircleData.new()
 		primary_circle.color = GADGET_COLORS.get(equipped_id, DEFAULT_FILL)
@@ -207,12 +207,10 @@ func _draw() -> void:
 func _draw_pie_wedge(center: Vector2, rad: float, ratio: float, color: Color) -> void:
 	if rad <= 0.0 or ratio <= 0.001:
 		return
-	
 	# Drawing a 360-degree pie wedge with draw_polygon causes self-overlapping start/end vertices that break 2D triangulation. Use draw_circle for full circles.
 	if ratio >= 0.999:
 		draw_circle(center, rad, color)
 		return
-	
 	var points: PackedVector2Array = [center]
 	var num_segments: int = max(4, int(ceil(32 * ratio)))
 	var start_angle: float = -PI / 2.0  # Start pointing straight up (-90 degrees)

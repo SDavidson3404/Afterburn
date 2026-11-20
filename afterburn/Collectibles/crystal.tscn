@@ -2,14 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dd8g3jlj8mecp" path="res://Collectibles/crystal.gd" id="1_2kwii"]
 [ext_resource type="PackedScene" uid="uid://s7vdp82ujmq7" path="res://Collectibles/collectible_template.tscn" id="1_lqwqg"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_l8h54"]
-emission_enabled = true
-emission = Color(0, 1, 1, 1)
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_2kwii"]
-material = SubResource("StandardMaterial3D_l8h54")
-height = 1.0
+[ext_resource type="PackedScene" uid="uid://ljppv7xwdmei" path="res://Collectibles/crystal_model.tscn" id="3_joqe1"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_fnnny"]
 height = 3.2
@@ -21,11 +14,11 @@ Name = "Crystal"
 
 [node name="CollectibleTemplate" parent="." unique_id=1412815026 instance=ExtResource("1_lqwqg")]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CollectibleTemplate" unique_id=2123246371]
-mesh = SubResource("CapsuleMesh_2kwii")
-
 [node name="CollisionShape3D2" type="CollisionShape3D" parent="CollectibleTemplate" unique_id=1155668452]
 shape = SubResource("CylinderShape3D_fnnny")
+
+[node name="Crystal" parent="CollectibleTemplate" unique_id=591534376 instance=ExtResource("3_joqe1")]
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0, 0)
 
 [node name="OmniLight3D" type="OmniLight3D" parent="CollectibleTemplate" unique_id=302910481]
 light_color = Color(0, 1, 1, 1)

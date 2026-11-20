@@ -25,8 +25,6 @@ gravity = Vector3(0, 0, 60)
 size = Vector2(0.25, 0.25)
 orientation = 1
 
-[sub_resource type="BoxMesh" id="BoxMesh_jp6wc"]
-
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_jp6wc"]
 radius = 9.545
 height = 19.09
@@ -140,7 +138,7 @@ script = ExtResource("1_l8h54")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Body" unique_id=1107740713]
 shape = SubResource("CapsuleShape3D_r8tgl")
 
-[node name="Main Character Placeholder" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
+[node name="Model" parent="Body" unique_id=1036910471 instance=ExtResource("2_4ntmi")]
 transform = Transform3D(-6.5567085e-09, 0, 0.15, 0, 0.15, 0, -0.15, 0, -6.5567085e-09, 0, 0.49828595, 0)
 
 [node name="Skateboard" parent="Body" unique_id=401567063 instance=ExtResource("3_gwnis")]
@@ -182,42 +180,47 @@ metadata/_edit_use_anchors_ = true
 
 [node name="Power Meter" type="ProgressBar" parent="Body/UI" unique_id=267632114]
 offset_left = 391.0
-offset_top = 575.0
+offset_top = 585.0
 offset_right = 712.0
-offset_bottom = 602.0
+offset_bottom = 612.0
 show_percentage = false
 
 [node name="Row_Squares" type="Node2D" parent="Body/UI" unique_id=893208432]
 
-[node name="Row1" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1916899024]
+[node name="Row1" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=545599885]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(448, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 424.0
+offset_top = 623.0
+offset_right = 472.0
+offset_bottom = 627.0
 
-[node name="Row2" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1579182820]
+[node name="Row2" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1345457691]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(501, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 477.0
+offset_top = 623.0
+offset_right = 525.0
+offset_bottom = 627.0
 
-[node name="Row3" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=210266865]
+[node name="Row3" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1075721872]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(551.99994, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 528.0
+offset_top = 623.0
+offset_right = 576.0
+offset_bottom = 627.0
 
-[node name="Row4" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=833332831]
+[node name="Row4" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1387042881]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(604, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 580.0
+offset_top = 623.0
+offset_right = 628.0
+offset_bottom = 627.0
 
-[node name="Row5" type="MeshInstance2D" parent="Body/UI/Row_Squares" unique_id=1275927668]
+[node name="Row5" type="ColorRect" parent="Body/UI/Row_Squares" unique_id=1311922455]
 modulate = Color(0, 0, 0, 1)
-position = Vector2(655, 625)
-scale = Vector2(48, 4)
-mesh = SubResource("BoxMesh_jp6wc")
+offset_left = 631.0
+offset_top = 623.0
+offset_right = 679.0
+offset_bottom = 627.0
 
 [node name="Invincible indicator" type="MeshInstance2D" parent="Body/UI" unique_id=42956622]
 position = Vector2(1059, 86)

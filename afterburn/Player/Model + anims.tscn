@@ -502,10 +502,11 @@ _data = {
 [node name="Main Character Placeholder" unique_id=1036910471 instance=ExtResource("1_27p27")]
 script = ExtResource("2_k2uew")
 
-[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(2096180001) index="0" unique_id=1994301665]
+[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(350952929) index="0" unique_id=1713522478]
 bones/0/rotation = Quaternion(-1.2887437e-08, -4.2683645e-08, -0.25780466, 0.96619713)
 bones/0/scale = Vector3(1, 1, 0.9999999)
 bones/1/rotation = Quaternion(-6.528312e-09, 6.1060746e-08, -0.2414743, 0.9704073)
+bones/3/position = Vector3(0.0028014674, 1.8199745, 0.004448113)
 bones/3/rotation = Quaternion(-0.6587564, 0.06496709, 0.12442034, 0.73914737)
 bones/3/scale = Vector3(0.99999994, 0.9999999, 1.0000001)
 bones/4/rotation = Quaternion(-0.051643547, -0.061692685, -0.1615434, 0.98358065)

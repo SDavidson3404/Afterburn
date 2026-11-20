@@ -9,6 +9,14 @@ enum GadgetType { RANDOM, PULSE_WAVE, MAGNET, POWER_ARMOR, HOVERBOARD, OVERDRIVE
 ## The specific gadget type this node represents. Defaults to RANDOM for procedural spawns.
 @export var gadget_type: GadgetType = GadgetType.RANDOM
 
+# Gadget Models
+@onready var placeholder_gadget: Node3D = $"Placeholder Gadget"
+@onready var magnet: Node3D = $Magnet
+@onready var overdriven_rocket: Node3D = $OverdrivenRocket
+@onready var power_armor: Node3D = $PowerArmor
+@onready var pulse_wave: Node3D = $PulseWave
+@onready var hoverboard: Node3D = $Hoverboard
+
 ## Guard flag preventing duplicate pickup activations within the same frame.
 var _is_collected: bool = false
 
@@ -45,25 +53,32 @@ func _resolve_gadget_type_and_color() -> void:
 
 ## Programmatically overrides mesh material and light node color to color-code the pickup in 3D space.
 func _apply_gadget_color() -> void:
-	var mesh_node := get_node_or_null("MeshInstance3D") as MeshInstance3D
-	if not mesh_node:
-		return
-
+	var gadget_models: Array = [placeholder_gadget, magnet, pulse_wave, power_armor, hoverboard, overdriven_rocket]
+	
 	var gadget_color: Color = Color.WHITE
+	var gadget_model: Node3D = placeholder_gadget
 	match gadget_type:
-		GadgetType.PULSE_WAVE: gadget_color = Color.MAGENTA
-		GadgetType.MAGNET: gadget_color = Color.RED
-		GadgetType.POWER_ARMOR: gadget_color = Color.GREEN
-		GadgetType.HOVERBOARD: gadget_color = Color.WHITE
-		GadgetType.OVERDRIVEN_ROCKET: gadget_color = Color(1.0, 0.35, 0.0)
-
-	var material := StandardMaterial3D.new()
-	material.albedo_color = gadget_color
-	material.emission_enabled = true
-	material.emission = gadget_color
-	material.emission_energy_multiplier = 1.5
-
-	mesh_node.material_override = material
+		GadgetType.PULSE_WAVE: 
+			gadget_color = Color.MAGENTA
+			gadget_model = pulse_wave
+		GadgetType.MAGNET: 
+			gadget_color = Color.RED
+			gadget_model = magnet
+		GadgetType.POWER_ARMOR: 
+			gadget_color = Color.GREEN
+			gadget_model = power_armor
+		GadgetType.HOVERBOARD: 
+			gadget_color = Color.WHITE
+			gadget_model = hoverboard
+		GadgetType.OVERDRIVEN_ROCKET: 
+			gadget_color = Color(1.0, 0.35, 0.0)
+			gadget_model = overdriven_rocket
+	
+	for item in gadget_models:
+		if gadget_model == item:
+			gadget_model.visible = true
+		else:
+			item.visible = false
 
 	# Sync OmniLight3D light color with active gadget type
 	var light_node := get_node_or_null("OmniLight3D") as OmniLight3D

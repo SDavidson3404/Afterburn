@@ -9,11 +9,12 @@ signal dashing # A signal for when dashing
 @onready var score_label: Label = $Body/UI/ScoreLabel # The label which shows the score
 @onready var row_squares: Node2D = $Body/UI/Row_Squares # The parent node of the row indicators
 @onready var body: CharacterBody3D = $Body # The body of the player
+@onready var collision_shape: CollisionShape3D = $Body/CollisionShape3D
 @onready var invincible_indicator: MeshInstance2D = $"Body/UI/Invincible indicator" # An inidicator for when invincible
 @onready var power_meter: ProgressBar = $"Body/UI/Power Meter" # The meter that shows the power
 @onready var speed_label: Label = $Body/UI/SpeedLabel # The label that shows the speed
 @onready var animation_player: AnimationPlayer = $Body/AnimationPlayer # The animation player
-@onready var model: Node3D = get_node_or_null("Body/Main Character Placeholder")
+@onready var model: Node3D = $Body/Model
 @onready var afterburner: GPUParticles3D = $Body/FireParticles/GPUParticles3D
 @export var power_node: Node # The node that controls the power of the skateboard
 @export var Wall_Detection: Node3D # The script that detects when walls are hit
@@ -26,6 +27,8 @@ const JUMP_VELOCITY: float = 7.0 # The velocity of the jump
 const GRAVITY: float = 12.0 # The strength of gravity
 const STRAFE_SPEED: float = 15.0  # The speed of strafing
 const dash_multiplier: float = 2.0 # The multiplier to the speed when dashing
+const POWER_METER_NORMAL_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
+const POWER_METER_LOW_COLOR: Color = Color(1.0, 0.0, 0.0, 1.0)
 
 # Regular variables
 var current_speed: float = 15.0 # The speed of movement
@@ -46,12 +49,16 @@ var jump_velocity_multiplier: float = 1.0
 var gravity_multiplier: float = 1.0
 var dash_decel_multiplier: float = 1.0
 var dash_decel_rate: float = 0.0
+var _hit_blink_tween: Tween = null
 
 ## Runs when the scene is instanced or loaded in
 func _ready() -> void:
 	
 	# Apply the power node's signals signals
 	connect_signals()
+	
+	if power_node:
+		_update_power_meter_color(power_node.current_power)
 	
 	# set the invincibility indicator
 	invincible_indicator.modulate = Color(0.0, 0.0, 0.0, 0.325)
@@ -68,6 +75,25 @@ func _ready() -> void:
 	
 	# Capture the mouse
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	var starting_gadget_id: String = "None"
+	match DatabaseManager.chosen_starting_gadget:
+		"Pulse Wave":
+			starting_gadget_id = "pulse_wave"
+		"Magnet":
+			starting_gadget_id = "magnet"
+		"Power Armor":
+			starting_gadget_id = "power_armor"
+		"Hoverboard":
+			starting_gadget_id = "hoverboard"
+		"Overdriven Rocket":
+			starting_gadget_id = "overdriven_rocket"
+	if not starting_gadget_id == "None":
+		var gadget_instance: GadgetBase = GadgetBase.create_by_id(starting_gadget_id)
+		if gadget_instance:
+				power_node.add_child(gadget_instance)
+				power_node.selected_gadget = gadget_instance
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	power_node.start_run()
 
 ## Runs on input of any kind
 func _input(event: InputEvent) -> void:
@@ -142,11 +168,12 @@ func _physics_process(delta: float) -> void:
 	afterburner.speed_scale = afterburner_speed
 	afterburner.amount = afterburner_amount
 	
-	if model and model.has_method("play_anim") and not animation_player.is_playing():
+	if model and model.has_method("play_anim") and not is_sliding:
 		model.play_anim("Idle")
 	# Set the power meter to reflect the current power
 	if power_meter:
 		power_meter.value = min(power_node.current_power, 100.0)
+		_update_power_meter_color(power_node.current_power)
 	
 	# Update text to reflect current speed and score
 	speed_label.text = ("SPEED(MPS): " + "%.1f" % current_speed)
@@ -160,31 +187,29 @@ func _physics_process(delta: float) -> void:
 	
 	# If you are dashing, set the velocity to current speed of the power, times the dash multiplier and set is dashing to false
 	if is_dashing:
-		body.velocity.z = -power_node.current_speed * dash_multiplier
+		var target_vel_z: float = -power_node.current_speed
+		body.velocity.z = target_vel_z * dash_multiplier
 		is_dashing = false
-		dash_decel_rate = 0.0
+		var excess_speed: float = abs(body.velocity.z - target_vel_z)
+		var decel_duration: float = 1.0 / maxf(dash_decel_multiplier, 0.01)
+		dash_decel_rate = excess_speed / maxf(decel_duration, 0.01)
 	
 	# Otherwise if you are starting the run, set the initial velocity and note that it was set up
 	elif starting_run:
 		body.velocity.z = -power_node.current_speed
 		starting_run = false
+		dash_decel_rate = 0.0
 	
 	# If neither are true, change the speed towards the current speed in power
 	else:
 		var target_vel_z: float = -power_node.current_speed
 		
-		# If coasting, let power.gd's coasting deceleration dictate player speed directly
-		if power_node and power_node.is_coasting:
-			dash_decel_rate = 0.0
-			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
-		elif body.velocity.z < target_vel_z:
-			# Calculate required deceleration rate to reach target speed in exactly 1.0 second
-			if dash_decel_rate <= 0.0:
-				var excess_speed: float = abs(body.velocity.z - target_vel_z)
-				var decel_duration: float = 1.0 / maxf(dash_decel_multiplier, 0.01)
-				dash_decel_rate = excess_speed / maxf(decel_duration, 0.01)
+		# Only use dash_decel_rate when actively decelerating from a dash
+		if dash_decel_rate > 0.0 and body.velocity.z < target_vel_z:
 			
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, dash_decel_rate * delta)
+			if is_equal_approx(body.velocity.z, target_vel_z) or body.velocity.z >= target_vel_z:
+				dash_decel_rate = 0.0
 		else:
 			dash_decel_rate = 0.0
 			body.velocity.z = move_toward(body.velocity.z, target_vel_z, 50.0 * delta)
@@ -198,13 +223,9 @@ func _physics_process(delta: float) -> void:
 	# Runs if space is pressed and you are on the floor
 	if Input.is_action_just_pressed("Space") and body.is_on_floor():
 		
-		# If you are sliding, cancel it
+		# If you are sliding, cancel it and immediately restore the upright hitbox
 		if is_sliding:
-			if animation_player.current_animation == "Slide":
-				animation_player.stop()
-				
-			is_sliding = false
-			current_slide_dodge_count = 0
+			_end_slide()
 		
 		# Apply jump velocity and start jump maneuver
 		body.velocity.y += (JUMP_VELOCITY * jump_velocity_multiplier)
@@ -265,8 +286,23 @@ func update_row_square():
 ## Connects the necessary signals to their respective methods
 func connect_signals():
 	power_node.invincibility_changed.connect(_on_power_invincibility_changed)
+	power_node.power_changed.connect(_on_power_changed)
 	power_node.game_over_triggered.connect(lose)
 	Wall_Detection.Wall_Hit.connect(hit)
+	animation_player.animation_finished.connect(_on_animation_finished)
+
+## Updates the power meter color when suit power changes
+func _on_power_changed(current_power: float, _max_power: float) -> void:
+	_update_power_meter_color(current_power)
+
+## Sets the power meter to red below dash_cost (25) and reverts to normal at 25 or above
+func _update_power_meter_color(current_power: float) -> void:
+	if not power_meter or not power_node:
+		return
+	if current_power < power_node.dash_cost:
+		power_meter.modulate = POWER_METER_LOW_COLOR
+	else:
+		power_meter.modulate = POWER_METER_NORMAL_COLOR
 
 ## Changes the color of the Invincibility UI
 func _on_power_invincibility_changed(is_invincible: bool) -> void:
@@ -283,36 +319,70 @@ var time_left: int = 3
 ## Runs on losing the game
 func lose() -> void: 
 	print("YOU LOST")
+	if not game_over_screen:
+		game_over_screen = get_node_or_null("../GameOverScreen")
+	if not game_over_screen:
+		var go_packed := load("res://UI/game_over_screen.tscn") as PackedScene
+		if go_packed:
+			game_over_screen = go_packed.instantiate() as CanvasLayer
+			get_tree().current_scene.add_child(game_over_screen)
 	if game_over_screen and game_over_screen.has_method("show_game_over"):
 		game_over_screen.show_game_over()
-	else:
-		var go_node = get_node_or_null("../GameOverScreen")
-		if go_node and go_node.has_method("show_game_over"):
-			go_node.show_game_over()
 
 ## Begins the sliding state
-func slide():
+func slide() -> void:
 	if model and "animation_player" in model and model.animation_player:
 		model.animation_player.stop()
+		body.visible = true
 		
 	# Emit the sliding signal and set that the player is sliding
 	sliding.emit()
 	is_sliding = true
 	current_slide_dodge_count = 0
 	
-	# Play the animation and wait for it to finish
+	# Play the hitbox and model slide animations
 	animation_player.play("Slide")
 	if model and model.has_method("play_anim"):
 		model.play_anim("Slide")
-		
-	await animation_player.animation_finished
-	
-	# Set sliding to false
+
+## Resets slide state and restores upright hitbox when Slide finishes or is jump-canceled
+func _end_slide() -> void:
+	if animation_player.is_playing() and animation_player.current_animation == "Slide":
+		animation_player.stop()
+	if collision_shape:
+		collision_shape.position = Vector3.ZERO
+		collision_shape.rotation = Vector3.ZERO
+	if model and "animation_player" in model and model.animation_player:
+		if model.animation_player.current_animation == "Slide":
+			model.animation_player.stop()
 	is_sliding = false
 	current_slide_dodge_count = 0
 
-## Runs the hit wall animation upon being called
-func hit():
+## Signal callback when Body's AnimationPlayer completes an animation
+func _on_animation_finished(anim_name: StringName) -> void:
+	if anim_name == &"Slide":
+		_end_slide()
+
+## Runs the hit blink effect independently without interrupting an active Slide
+func hit() -> void:
 	cancel_dodge_maneuver()
-	animation_player.stop()
-	animation_player.play("Hit_Wall")
+	_play_hit_blink()
+
+## Blinks the player body using a dedicated Tween that always restores visibility
+func _play_hit_blink() -> void:
+	if _hit_blink_tween and _hit_blink_tween.is_valid():
+		_hit_blink_tween.kill()
+	body.visible = true
+
+	_hit_blink_tween = create_tween()
+	_hit_blink_tween.tween_callback(func(): body.visible = false)
+	_hit_blink_tween.tween_interval(0.167)
+	_hit_blink_tween.tween_callback(func(): body.visible = true)
+	_hit_blink_tween.tween_interval(0.333)
+	_hit_blink_tween.tween_callback(func(): body.visible = false)
+	_hit_blink_tween.tween_interval(0.167)
+	_hit_blink_tween.tween_callback(func(): body.visible = true)
+	_hit_blink_tween.tween_interval(0.323)
+	_hit_blink_tween.tween_callback(func(): body.visible = false)
+	_hit_blink_tween.tween_interval(0.177)
+	_hit_blink_tween.tween_callback(func(): body.visible = true)

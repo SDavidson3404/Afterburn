@@ -80,6 +80,11 @@ var speed_recovery_timer: float = 0.0
 func start_run() -> void:
 	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.reset_run_stats()
+		if selected_gadget and selected_gadget.gadget_id != "base_gadget":
+			DatabaseManager.chosen_starting_gadget = selected_gadget.gadget_id
+		else:
+			DatabaseManager.chosen_starting_gadget = "None"
+		DatabaseManager.save_wallet()
 
 	# Reset suit modifiers and overdrive states to baseline defaults
 	is_overcharged = false
@@ -94,14 +99,6 @@ func start_run() -> void:
 	has_overdriven_rocket = false
 	is_overdrive_surge = false
 	active_armor_layers.clear()
-	
-	# Apply loadout handicaps and initialize cooldown state if a gadget is equipped
-	if selected_gadget:
-		selected_gadget.apply_loadout_nerf(self)
-		gadget_cooldown_progress = 0.0
-		is_gadget_ready = true
-		gadget_cooldown_changed.emit(0.0, true)
-		
 	current_power = max_power
 	current_speed = base_speed
 	target_speed = base_speed
@@ -112,6 +109,14 @@ func start_run() -> void:
 	invincibility_timer = 0.0
 	speed_recovery_timer = 0.0
 	
+	# Apply loadout handicaps and initialize cooldown state if a gadget is equipped
+	if selected_gadget:
+		selected_gadget.apply_loadout_nerf(self)
+		gadget_cooldown_progress = 0.0
+		is_gadget_ready = true
+		gadget_cooldown_changed.emit(0.0, true)
+	
+	# Emit the power changed signal
 	power_changed.emit(current_power, max_power)
 	
 	# Bind player action signals to power drain callbacks
@@ -119,11 +124,14 @@ func start_run() -> void:
 		if not player.dashing.is_connected(dash):
 			player.dashing.connect(dash)
 
-
+# Runs when the next frame starts
 func _process(delta: float) -> void:
+	
+	# If run isn't active, don't do anything
 	if not is_run_active:
 		return
-		
+	
+	# Variable for if you are invincible this frame
 	var was_invincible_this_frame: bool = is_invincible
 	
 	# Process invincibility expiration and speed catch-up logic
@@ -135,7 +143,6 @@ func _process(delta: float) -> void:
 			invincibility_timer -= delta
 			if invincibility_timer <= 0.0:
 				_set_invincible(false)
-			
 	if speed_recovery_timer > 0.0:
 		speed_recovery_timer = maxf(0.0, speed_recovery_timer - delta)
 	
@@ -143,6 +150,7 @@ func _process(delta: float) -> void:
 	var meters_moved: float = current_speed * delta
 	distance_traveled += meters_moved
 	
+	# Update database manager
 	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.add_distance(meters_moved)
 	
@@ -151,8 +159,10 @@ func _process(delta: float) -> void:
 	
 	# State Machine Processing: Coasting vs Overdrive Surge vs Normal Operation
 	if is_coasting:
-		var active_coasting_rate: float = coasting_deceleration * coasting_deceleration_multiplier
-		current_speed = maxf(0.0, current_speed - (active_coasting_rate * delta))
+		# Wait until any active dash deceleration finishes before decaying coasting speed
+		if not player or (not player.is_dashing and player.dash_decel_rate <= 0.0):
+			var active_coasting_rate: float = coasting_deceleration * coasting_deceleration_multiplier
+			current_speed = maxf(0.0, current_speed - (active_coasting_rate * delta))
 		if current_speed <= 0.0 and (not player or player.current_speed <= 0.0):
 			end_run()
 			
@@ -447,16 +457,21 @@ func obstacle_hit(damage: float = 25.0) -> void:
 
 
 ## Terminates active run, saves statistics to SQLite database, and fires game over signal.
-func end_run() -> void:
+func end_run(emit_game_over: bool = true) -> void:
+	if not is_run_active:
+		return
+
 	if get_node_or_null("/root/DatabaseManager"):
 		DatabaseManager.save_run()
+		DatabaseManager.add_coins()
 		
 	is_run_active = false
 	is_coasting = false
 	is_overdrive_surge = false
 	is_invincible = false
 	current_speed = 0.0
-	game_over_triggered.emit()
+	if emit_game_over:
+		game_over_triggered.emit()
 
 
 ## Power drain callback invoked when player dashes.

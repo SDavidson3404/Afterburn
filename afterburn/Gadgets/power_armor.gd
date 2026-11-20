@@ -49,6 +49,7 @@ class PowerArmorInstance extends Node:
 	## Reference to the main power manager node.
 	var power_manager: Node = null
 	
+	## Whether this armor instance was created via loadout gadget activation.
 	var is_from_loadout: bool = false
 	
 	func _ready() -> void:

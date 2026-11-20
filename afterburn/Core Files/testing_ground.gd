@@ -74,7 +74,7 @@ func run_power_tests() -> void:
 	print("====================================\n")
 	
 	# Instantiate power manager node into scene tree
-	var power: Node = preload("res://power.gd").new()
+	var power: Node = preload("res://Core Files/power.gd").new()
 	add_child(power)
 	
 	# Single-element arrays allow pass-by-reference mutation inside lambda callbacks
@@ -189,7 +189,7 @@ func run_crystal_spawn_tests() -> void:
 	test_root.add_child(player_node)
 	player_node.global_position = Vector3.ZERO
 	
-	var power_node: Node = preload("res://power.gd").new()
+	var power_node: Node = preload("res://Core Files/power.gd").new()
 	test_root.add_child(power_node)
 	
 	# Construct dynamic dummy PackedScene resource for crystal instantiation
@@ -199,7 +199,7 @@ func run_crystal_spawn_tests() -> void:
 	dummy_crystal.free()
 	
 	# Instantiate crystal spawner
-	var spawner_script = preload("res://crystal_spawn.gd")
+	var spawner_script = preload("res://Spawners/crystal_spawn.gd")
 	var spawner = Node3D.new()
 	spawner.set_script(spawner_script)
 	spawner.player = player_node

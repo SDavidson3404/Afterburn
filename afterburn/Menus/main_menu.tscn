@@ -1,0 +1,364 @@
+[gd_scene format=3 uid="uid://lipxi2n8t1a2"]
+
+[ext_resource type="Script" uid="uid://dxvkd2xbrxjyi" path="res://Menus/main_menu.gd" id="1_jf8mj"]
+[ext_resource type="Script" uid="uid://krvhi1h3b568" path="res://Menus/shop.gd" id="2_p3jrs"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fnnny"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 10
+border_width_top = 5
+border_width_right = 10
+border_color = Color(0, 0.8, 0.8, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r8tgl"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 10
+border_width_top = 5
+border_width_right = 10
+border_color = Color(0.7054149, 0.85660034, 0.5897561, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_her67"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 10
+border_width_top = 5
+border_width_right = 10
+border_color = Color(0.77613527, 0.25021, 0.45329297, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1k3a8"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 5
+border_width_top = 3
+border_width_right = 5
+border_color = Color(0, 0.8, 0.8, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_405oi"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 5
+border_width_top = 3
+border_width_right = 5
+border_color = Color(5.4869055e-05, 0.73197556, 0.1941829, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ygn46"]
+bg_color = Color(0, 0, 0, 1)
+border_width_left = 5
+border_width_top = 3
+border_width_right = 5
+border_color = Color(0.8, 0, 0.8, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="Main Menu" type="Node2D" unique_id=751866201]
+script = ExtResource("1_jf8mj")
+
+[node name="Menu" type="CanvasLayer" parent="." unique_id=1958796577]
+
+[node name="PanelContainer" type="PanelContainer" parent="Menu" unique_id=1204682936]
+offset_left = 13.0
+offset_top = 274.0
+offset_right = 722.0
+offset_bottom = 626.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu/PanelContainer" unique_id=362749381]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Menu/PanelContainer/VBoxContainer" unique_id=415394380]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 45
+text = "Afterburn"
+
+[node name="Start Game" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=858523421]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Start Game"
+
+[node name="Settings" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=889810540]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Settings"
+
+[node name="Stats" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=66596106]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Stats"
+
+[node name="Shop" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=1717127342]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Shop
+"
+
+[node name="Leaderboard" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=79835135]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Leaderboard"
+
+[node name="Quit" type="Button" parent="Menu/PanelContainer/VBoxContainer" unique_id=1729521862]
+layout_mode = 2
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("StyleBoxFlat_fnnny")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r8tgl")
+theme_override_styles/hover = SubResource("StyleBoxFlat_her67")
+text = "Quit"
+
+[node name="Stats" type="CanvasLayer" parent="." unique_id=964057081]
+
+[node name="StatsPanel" type="PanelContainer" parent="Stats" unique_id=1909766522]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 224.0
+offset_top = -298.0
+offset_right = 544.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Stats/StatsPanel" unique_id=33116099]
+custom_minimum_size = Vector2(300, 260)
+layout_mode = 2
+
+[node name="StatsHeader" type="Label" parent="Stats/StatsPanel/VBoxContainer" unique_id=412071195]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "LIFETIME STATS"
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="Stats/StatsPanel/VBoxContainer" unique_id=1877877390]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Loading stats..."
+
+[node name="Leaderboard" type="CanvasLayer" parent="." unique_id=1369351048]
+
+[node name="LeaderboardPanel" type="PanelContainer" parent="Leaderboard" unique_id=77991920]
+visible = false
+offset_left = 736.0
+offset_top = 320.0
+offset_right = 1135.0
+offset_bottom = 636.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Leaderboard/LeaderboardPanel" unique_id=1751606909]
+layout_mode = 2
+
+[node name="Scores" type="RichTextLabel" parent="Leaderboard/LeaderboardPanel/VBoxContainer" unique_id=1826709724]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 21
+theme_override_font_sizes/bold_font_size = 21
+text = "1st Place:
+2nd Place:
+3rd Place:
+4th Place:
+5th Place:
+6th Place:
+7th Place:
+8th Place:
+9th Place:
+10th Place:"
+fit_content = true
+scroll_active = false
+
+[node name="Settings" type="CanvasLayer" parent="." unique_id=1544946233]
+
+[node name="SettingPanel" type="PanelContainer" parent="Settings" unique_id=1978109876]
+visible = false
+offset_left = 9.0
+offset_top = 11.0
+offset_right = 368.0
+offset_bottom = 258.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Settings/SettingPanel" unique_id=1737697485]
+layout_mode = 2
+
+[node name="ResLabel" type="Label" parent="Settings/SettingPanel/VBoxContainer" unique_id=47652153]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "UI Scale: 1.0x"
+
+[node name="HSlider" type="HSlider" parent="Settings/SettingPanel/VBoxContainer" unique_id=1686813696]
+layout_mode = 2
+min_value = 0.5
+max_value = 3.0
+step = 0.1
+value = 1.0
+
+[node name="GadgetLabel" type="Label" parent="Settings/SettingPanel/VBoxContainer" unique_id=1852594053]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Starting Gadget:"
+
+[node name="GadgetMenu" type="OptionButton" parent="Settings/SettingPanel/VBoxContainer" unique_id=1392587362]
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+selected = 0
+item_count = 1
+popup/item_0/text = "None"
+popup/item_0/id = 0
+
+[node name="ResLabel2" type="Label" parent="Settings/SettingPanel/VBoxContainer" unique_id=1898756345]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Reset Save?:"
+
+[node name="ResetButton" type="Button" parent="Settings/SettingPanel/VBoxContainer" unique_id=1732939068]
+layout_mode = 2
+theme_override_font_sizes/font_size = 21
+text = "CLICK HERE TO RESET"
+
+[node name="Shop" type="CanvasLayer" parent="." unique_id=861703169]
+visible = false
+script = ExtResource("2_p3jrs")
+
+[node name="PanelContainer" type="PanelContainer" parent="Shop" unique_id=1255159293]
+offset_left = 382.0
+offset_top = 14.0
+offset_right = 776.0
+offset_bottom = 258.0
+
+[node name="Labels" type="VBoxContainer" parent="Shop/PanelContainer" unique_id=492118409]
+layout_mode = 2
+
+[node name="PulseLabel" type="Label" parent="Shop/PanelContainer/Labels" unique_id=1831192605]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Pulse Wave"
+
+[node name="MagLabel" type="Label" parent="Shop/PanelContainer/Labels" unique_id=1522480398]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Magnet"
+
+[node name="PowerLabel" type="Label" parent="Shop/PanelContainer/Labels" unique_id=1294015271]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Power Armor"
+
+[node name="HoverLabel" type="Label" parent="Shop/PanelContainer/Labels" unique_id=1300688510]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Hoverboard"
+
+[node name="OverLabel" type="Label" parent="Shop/PanelContainer/Labels" unique_id=906850988]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Overdriven Rocket"
+
+[node name="CoinLabel" type="Label" parent="Shop/PanelContainer/Labels" unique_id=1759318609]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "Coin Count: X"
+
+[node name="Buttons" type="VBoxContainer" parent="Shop" unique_id=2063094658]
+offset_left = 597.0
+offset_top = 17.0
+offset_right = 770.0
+offset_bottom = 261.0
+
+[node name="PulseButton" type="Button" parent="Shop/Buttons" unique_id=785167320]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBoxFlat_1k3a8")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_405oi")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ygn46")
+text = "100"
+
+[node name="MagButton" type="Button" parent="Shop/Buttons" unique_id=93916978]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBoxFlat_1k3a8")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_405oi")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ygn46")
+text = "200"
+
+[node name="PowerButton" type="Button" parent="Shop/Buttons" unique_id=1809036591]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBoxFlat_1k3a8")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_405oi")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ygn46")
+text = "300"
+
+[node name="HoverButton" type="Button" parent="Shop/Buttons" unique_id=1790808405]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBoxFlat_1k3a8")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_405oi")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ygn46")
+text = "400"
+
+[node name="OverButton" type="Button" parent="Shop/Buttons" unique_id=380567610]
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+theme_override_styles/normal = SubResource("StyleBoxFlat_1k3a8")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_405oi")
+theme_override_styles/hover = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_ygn46")
+theme_override_styles/focus = SubResource("StyleBoxFlat_ygn46")
+text = "500"
+
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Start Game" to="." method="_on_start_game_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Settings" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Stats" to="." method="_on_stats_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Shop" to="." method="_on_shop_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Leaderboard" to="." method="_on_leaderboard_pressed"]
+[connection signal="pressed" from="Menu/PanelContainer/VBoxContainer/Quit" to="." method="_on_quit_pressed"]
+[connection signal="value_changed" from="Settings/SettingPanel/VBoxContainer/HSlider" to="." method="_on_h_slider_value_changed"]
+[connection signal="item_selected" from="Settings/SettingPanel/VBoxContainer/GadgetMenu" to="." method="_on_gadget_menu_item_selected"]
+[connection signal="pressed" from="Settings/SettingPanel/VBoxContainer/ResetButton" to="." method="_on_reset_button_pressed"]
+[connection signal="bought" from="Shop" to="." method="_on_shop_bought"]
+[connection signal="pressed" from="Shop/Buttons/PulseButton" to="Shop" method="get_item" binds= [0]]
+[connection signal="pressed" from="Shop/Buttons/MagButton" to="Shop" method="get_item" binds= [1]]
+[connection signal="pressed" from="Shop/Buttons/PowerButton" to="Shop" method="get_item" binds= [2]]
+[connection signal="pressed" from="Shop/Buttons/HoverButton" to="Shop" method="get_item" binds= [3]]
+[connection signal="pressed" from="Shop/Buttons/OverButton" to="Shop" method="get_item" binds= [4]]
